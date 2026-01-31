@@ -12,20 +12,6 @@
       }
     ],
     [
-      "@eclass/semantic-release-docker",
-      {
-        "baseImageName": "schweinehund-pocketbase",
-        "registries": [
-          {
-            "url": "docker.io",
-            "imageName": "docker.io/rouhim/schweinehund-pocketbase",
-            "user": "DOCKER_USERNAME",
-            "password": "DOCKER_PASSWORD"
-          }
-        ]
-      }
-    ],
-    [
       "@semantic-release/git",
       {
         "assets": ["CHANGELOG.md", "package.json", "package-lock.json"],
