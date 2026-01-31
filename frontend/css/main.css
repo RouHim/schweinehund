@@ -1,13 +1,60 @@
+/* ============================================
+   Schweinehund Theme - Playful & Inviting CSS
+   ============================================ */
+
 :root {
-  --primary: #1f2937;
-  --secondary: #6366f1;
-  --danger: #ef4444;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --bg: #f9fafb;
-  --text: #111827;
-  --border: #e5e7eb;
+  /* Schweinehund Color Palette */
+  --color-primary: #FF7F50;      /* Warm Orange */
+  --color-secondary: #FF6B9D;    /* Pink */
+  --color-accent: #40E0D0;       /* Turquoise */
+  --color-bg: #FFF5E6;           /* Cream Background */
+  --color-success: #4CAF50;      /* Green for Completed */
+  --color-text: #333333;         /* Dark Gray */
+  --color-text-light: #666666;   /* Lighter Gray for Secondary Text */
+  --color-border: #FFD9C4;       /* Soft Peach Border */
+  --color-shadow: rgba(255, 127, 80, 0.1);
+  
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 
+                 Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-size-base: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  
+  /* Spacing - rem-based system */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-playful: 0 6px 12px var(--color-shadow);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
 }
+
+/* ============================================
+   Global Styles - Mobile First
+   ============================================ */
 
 * {
   margin: 0;
@@ -15,39 +62,492 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
 }
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+}
+
+/* ============================================
+   Typography
+   ============================================ */
 
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
 }
+
+h1 {
+  font-size: var(--font-size-xl);
+}
+
+h2 {
+  font-size: var(--font-size-lg);
+}
+
+h3 {
+  font-size: var(--font-size-base);
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+small {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+}
+
+/* ============================================
+   Layout
+   ============================================ */
 
 #app {
+  min-height: 100vh;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--spacing-md);
 }
 
-button {
-  padding: 0.5rem 1rem;
+main {
+  width: 100%;
+}
+
+section {
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ============================================
+   Cards - Soft shadows, rounded corners
+   ============================================ */
+
+.card, .task-card {
+  background-color: white;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-playful);
+  border: 1px solid var(--color-border);
+  transition: var(--transition-base);
+  animation: fadeIn var(--transition-base) ease-in-out;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.task-card {
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.task-card.completed {
+  opacity: 0.75;
+  border-color: var(--color-success);
+}
+
+/* ============================================
+   Buttons - Rounded, colorful, hover states
+   ============================================ */
+
+button, [role="button"], input[type="submit"] {
+  display: inline-block;
+  padding: var(--spacing-sm) var(--spacing-lg);
   border: none;
-  border-radius: 0.375rem;
-  background-color: var(--secondary);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-primary);
   color: white;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 button:hover {
-  opacity: 0.9;
+  background-color: #FF6B3D;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
 }
 
 button:active {
-  opacity: 0.8;
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Button Variants */
+button.secondary {
+  background-color: var(--color-secondary);
+}
+
+button.secondary:hover {
+  background-color: #FF5589;
+}
+
+button.success {
+  background-color: var(--color-success);
+}
+
+button.success:hover {
+  background-color: #45A049;
+}
+
+button.accent {
+  background-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+button.accent:hover {
+  background-color: #2ECFC5;
+  color: var(--color-text);
+}
+
+button.ghost {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  box-shadow: none;
+}
+
+button.ghost:hover {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   Forms & Inputs
+   ============================================ */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+textarea,
+select {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  background-color: white;
+  color: var(--color-text);
+  transition: var(--transition-fast);
+  min-height: 44px;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 127, 80, 0.1);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+/* ============================================
+   Custom Checkbox - Playful, large tap targets
+   ============================================ */
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-custom {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:hover ~ .checkbox-custom {
+  border-color: var(--color-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+input[type="checkbox"]:checked ~ .checkbox-custom {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  animation: popIn var(--transition-fast) ease-in-out;
+}
+
+.checkbox-custom::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-top: 3px solid transparent;
+  border-radius: 1px;
+}
+
+input[type="checkbox"]:checked ~ .checkbox-custom::after {
+  content: '✓';
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.checkbox-label {
+  cursor: pointer;
+  flex-grow: 1;
+  user-select: none;
+}
+
+input[type="checkbox"]:checked ~ .checkbox-label {
+  text-decoration: line-through;
+  color: var(--color-text-light);
+}
+
+/* ============================================
+   Animations - Subtle fade-in/slide effects
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-base) ease-in-out;
+}
+
+.slide-in-up {
+  animation: slideInUp var(--transition-base) ease-in-out;
+}
+
+.slide-in-left {
+  animation: slideInLeft var(--transition-base) ease-in-out;
+}
+
+/* ============================================
+   Utilities
+   ============================================ */
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-secondary {
+  color: var(--color-secondary);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-lg { margin-top: var(--spacing-lg); }
+
+.mb-sm { margin-bottom: var(--spacing-sm); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.mb-lg { margin-bottom: var(--spacing-lg); }
+
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-full { border-radius: var(--radius-full); }
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.gap-sm {
+  gap: var(--spacing-sm);
+}
+
+.gap-md {
+  gap: var(--spacing-md);
+}
+
+.gap-lg {
+  gap: var(--spacing-lg);
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+/* ============================================
+   Responsive - Desktop Breakpoints
+   ============================================ */
+
+@media (min-width: 640px) {
+  #app {
+    padding: var(--spacing-lg);
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  .card {
+    padding: var(--spacing-xl);
+  }
+
+  button {
+    padding: var(--spacing-md) var(--spacing-xl);
+  }
+}
+
+@media (min-width: 768px) {
+  #app {
+    padding: var(--spacing-2xl);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-lg);
+  }
 }
