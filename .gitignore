@@ -43,3 +43,8 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# Playwright Test Artifacts
+test-results/
+playwright-report/
+.playwright/

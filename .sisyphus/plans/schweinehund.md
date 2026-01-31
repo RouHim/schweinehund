@@ -318,7 +318,7 @@ Wave 5 (Final):
 
 ### Wave 2: Backend & PWA Foundation
 
-- [ ] 3. PocketBase Schema Design
+- [x] 3. PocketBase Schema Design
 
   **What to do**:
   - Collections in PocketBase erstellen:
@@ -399,7 +399,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 4. Service Worker & PWA Manifest
+- [x] 4. Service Worker & PWA Manifest
 
   **What to do**:
   - `manifest.json` mit:
@@ -461,7 +461,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 13. UI Theme & CSS
+- [x] 13. UI Theme & CSS
 
   **What to do**:
   - CSS Variables für Farbschema definieren:
@@ -518,7 +518,7 @@ Wave 5 (Final):
 
 ### Wave 3: Frontend Components
 
-- [ ] 5. Frontend Base Layout (HTMX + Alpine)
+- [x] 5. Frontend Base Layout (HTMX + Alpine)
 
   **What to do**:
   - `index.html` mit:
@@ -608,7 +608,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 6. Task List Component
+- [x] 6. Task List Component
 
   **What to do**:
   - "Heute" View: Zeigt Aufgaben für aktuellen Wochentag
@@ -665,7 +665,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 7. Task Edit Modal
+- [x] 7. Task Edit Modal
 
   **What to do**:
   - Modal/Overlay für Task bearbeiten
@@ -718,7 +718,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 8. Zone Management
+- [x] 8. Zone Management
 
   **What to do**:
   - "Zonen" View: Liste aller Zonen mit Wochentag-Zuordnung
@@ -773,7 +773,7 @@ Wave 5 (Final):
 
 ### Wave 4: Logic & Notifications
 
-- [ ] 9. ntfy Notification Integration
+- [x] 9. ntfy Notification Integration
 
   **What to do**:
   - PocketBase Hook: Bei bestimmten Events ntfy Nachricht senden
@@ -825,7 +825,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 10. Weekly Reset Scheduler
+- [x] 10. Weekly Reset Scheduler
 
   **What to do**:
   - PocketBase Cron/Scheduler für Montag 00:00
@@ -875,7 +875,7 @@ Wave 5 (Final):
 
 ---
 
-- [ ] 11. Task Rotation Logic
+- [x] 11. Task Rotation Logic
 
   **What to do**:
   - Bei Completion einer großen Aufgabe (is_daily=false):

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate configuration with 7-day delay for dependency updates",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "dependencyDashboard": true,
+  "packageRules": [
+    {
+      "description": "Docker images with digest pinning and 7-day delay",
+      "matchDatasources": ["docker"],
+      "minimumReleaseAge": "7 days",
+      "automerge": false
+    },
+    {
+      "description": "GitHub Actions with 7-day delay",
+      "matchManagers": ["github-actions"],
+      "minimumReleaseAge": "7 days",
+      "automerge": false
+    },
+    {
+      "description": "npm dependencies (semantic-release, Playwright) with 7-day delay",
+      "matchDatasources": ["npm"],
+      "matchPackageNames": [
+        "semantic-release",
+        "@semantic-release/*",
+        "@playwright/test",
+        "playwright"
+      ],
+      "minimumReleaseAge": "7 days",
+      "automerge": false
+    },
+    {
+      "description": "Automerge patch and digest updates after 7 days",
+      "matchUpdateTypes": ["patch", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Require manual approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "minimumReleaseAge": "7 days"
+    }
+  ]
+}
