@@ -551,3 +551,284 @@ input[type="checkbox"]:checked ~ .checkbox-label {
     gap: var(--spacing-lg);
   }
 }
+
+/* ============================================
+   Header & Navigation
+   ============================================ */
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background-color: white;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo {
+  max-height: 48px;
+  width: auto;
+}
+
+nav {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.nav-button {
+  flex: 1;
+  border-bottom: 3px solid transparent;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.nav-button:hover {
+  background-color: rgba(255, 127, 80, 0.1);
+  border-bottom-color: var(--color-primary);
+  transform: none;
+}
+
+.nav-button:active,
+.nav-button.active {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ============================================
+   View Container
+   ============================================ */
+
+.view-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+  animation: fadeIn var(--transition-base) ease-in-out;
+}
+
+/* ============================================
+   Task Components
+   ============================================ */
+
+.task-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.task-section h3 {
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  background-color: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+  animation: slideInUp var(--transition-base) ease-in-out;
+}
+
+.task-item:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.task-item.completed {
+  opacity: 0.6;
+  background-color: rgba(76, 175, 80, 0.05);
+  border-color: var(--color-success);
+}
+
+.task-item.completed .task-name {
+  text-decoration: line-through;
+  color: var(--color-text-light);
+}
+
+.task-item.highlight {
+  border-color: var(--color-accent);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(64, 224, 208, 0.1);
+}
+
+.task-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.task-checkbox {
+  /* Inherits from existing checkbox styles */
+  flex-shrink: 0;
+}
+
+.task-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.task-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  flex: 1;
+}
+
+/* ============================================
+   Zone Components
+   ============================================ */
+
+.zones-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 640px) {
+  .zones-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.zone-card {
+  padding: var(--spacing-lg);
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border-left: 4px solid var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+  animation: slideInLeft var(--transition-base) ease-in-out;
+}
+
+.zone-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateX(4px);
+}
+
+.zone-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.zone-emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+/* ============================================
+   Modal Components
+   ============================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  animation: fadeIn var(--transition-fast) ease-in-out;
+}
+
+.modal-content {
+  max-width: 500px;
+  width: 100%;
+  background-color: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  animation: slideInUp var(--transition-base) ease-in-out;
+}
+
+.modal-content h3 {
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-primary);
+}
+
+.modal-content form label {
+  display: block;
+  margin-bottom: var(--spacing-lg);
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+/* ============================================
+   Button Variants
+   ============================================ */
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  min-height: 36px;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #FF6B3D;
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #FF5589;
+}
+
+/* ============================================
+   State & Utility Classes
+   ============================================ */
+
+.highlight {
+  border-color: var(--color-accent);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(64, 224, 208, 0.1);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  color: var(--color-text-light);
+  font-size: var(--font-size-lg);
+  animation: pulse 2s ease-in-out infinite;
+}

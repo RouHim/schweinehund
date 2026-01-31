@@ -30,21 +30,21 @@
   <!-- Navigation -->
   <nav>
     <button 
-      hx-get="/partials/today" 
+      hx-get="/partials/today.html" 
       hx-target="#main" 
       hx-swap="innerHTML"
       class="nav-button">
       Heute
     </button>
     <button 
-      hx-get="/partials/tasks" 
+      hx-get="/partials/tasks.html" 
       hx-target="#main" 
       hx-swap="innerHTML"
       class="nav-button">
       Aufgaben
     </button>
     <button 
-      hx-get="/partials/zones" 
+      hx-get="/partials/zones.html" 
       hx-target="#main" 
       hx-swap="innerHTML"
       class="nav-button">
@@ -55,7 +55,7 @@
   <!-- Main Content Area -->
   <main 
     id="main" 
-    hx-get="/partials/today" 
+    hx-get="/partials/today.html" 
     hx-trigger="load"
     hx-swap="innerHTML">
     <div class="loading">
