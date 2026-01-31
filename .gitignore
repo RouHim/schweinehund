@@ -36,6 +36,15 @@ dist/
 build/
 .cache/
 
+# Rust
+backend/target/
+target/
+
+# Runtime data
+data/
+backend/data/
+ntfy/cache/
+
 # OS
 Thumbs.db
 .AppleDouble

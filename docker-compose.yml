@@ -1,27 +1,21 @@
 version: '3.9'
 
 services:
-  # PocketBase - Go backend with built-in SQLite database
-  pocketbase:
+  backend:
     build:
-      context: ./pocketbase
-      dockerfile: Dockerfile
-    image: schweinehund-pocketbase:local
-    container_name: schweinehund-pocketbase
+      context: ./backend
+      dockerfile: Containerfile
+    image: schweinehund-backend:local
+    container_name: schweinehund-backend
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
-      - POCKETBASE_DEBUG=false
-      - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-default-encryption-key-change-in-production}
+      - DATA_DIR=/app/data
+      - NTFY_URL=http://ntfy:80/schweinehund
     volumes:
-      - ./pocketbase/pb_data:/pb/pb_data
-      - ./pocketbase/pb_hooks:/pb/pb_hooks
-      - ./pocketbase/pb_migrations:/pb/pb_migrations
-      - ./frontend:/pb/pb_public:ro
+      - ./data:/app/data
     ports:
       - "8090:8090"
-    entrypoint: ["/usr/local/bin/pocketbase"]
-    command: ["serve", "--http=0.0.0.0:8090", "--publicDir=/pb/pb_public"]
     healthcheck:
       test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:8090/api/health", "-O", "-"]
       interval: 10s

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FF7F50">
+  <meta name="description" content="Schweinehund - Putzplan PWA für den Haushalt">
+  
+  <title>Schweinehund</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Icons -->
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+  <link rel="apple-touch-icon" sizes="192x192" href="/assets/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/assets/icon-512.png">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body x-data="app()" hx-ext="alpine-morph">
+  
+  <!-- Header -->
+  <header>
+    <img src="/assets/logo.svg" alt="Schweinehund Logo" class="logo">
+    <h1>Schweinehund</h1>
+  </header>
+  
+  <!-- Navigation -->
+  <nav>
+    <button 
+      hx-get="/partials/today.html" 
+      hx-target="#main" 
+      hx-swap="innerHTML"
+      class="nav-button">
+      Heute
+    </button>
+    <button 
+      hx-get="/partials/tasks.html" 
+      hx-target="#main" 
+      hx-swap="innerHTML"
+      class="nav-button">
+      Aufgaben
+    </button>
+    <button 
+      hx-get="/partials/zones.html" 
+      hx-target="#main" 
+      hx-swap="innerHTML"
+      class="nav-button">
+      Zonen
+    </button>
+  </nav>
+  
+  <!-- Main Content Area -->
+  <main 
+    id="main" 
+    hx-get="/partials/today.html" 
+    hx-trigger="load"
+    hx-swap="innerHTML">
+    <div class="loading">
+      <p>Lädt...</p>
+    </div>
+  </main>
+  
+  <!-- Scripts: Order matters! -->
+  <!-- 1. HTMX -->
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  
+  <!-- 2. Alpine.js Morph Extension (must load before Alpine core) -->
+  <script defer src="https://unpkg.com/@alpinejs/morph@3.x.x/dist/cdn.min.js"></script>
+  
+   <!-- 3. Alpine.js Core -->
+   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+   
+   <!-- 4. App Logic -->
+   <script src="/js/app.js"></script>
+  
+</body>
+</html>

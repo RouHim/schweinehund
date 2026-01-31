@@ -1,0 +1,119 @@
+<div class="view-container" x-data="zonesView()">
+  <h2>Zonen</h2>
+  
+  <div class="zones-list">
+    <template x-for="zone in zones" :key="zone.id">
+      <div class="zone-card" :style="`border-color: ${zone.color}`">
+        <div class="zone-header">
+          <span class="zone-emoji" x-text="zone.emoji"></span>
+          <div>
+            <h3 x-text="zone.name"></h3>
+            <small x-text="weekdayName(zone.weekday)"></small>
+          </div>
+        </div>
+        <button @click="editZone = zone" class="btn-sm">✏️ Bearbeiten</button>
+      </div>
+    </template>
+  </div>
+
+  <div x-show="editZone" class="modal-overlay" @click.self="editZone = null">
+    <div class="modal-content">
+      <h3><span x-text="editZone?.id ? 'Zone bearbeiten' : 'Neue Zone'"></span></h3>
+      
+      <form @submit.prevent="saveZone">
+        <label>
+          Name:
+          <input type="text" x-model="editZone.name" required>
+        </label>
+        
+        <label>
+          Emoji:
+          <input type="text" x-model="editZone.emoji" maxlength="2">
+        </label>
+        
+        <label>
+          Wochentag:
+          <select x-model.number="editZone.weekday" required>
+            <option value="0">Sonntag</option>
+            <option value="1">Montag</option>
+            <option value="2">Dienstag</option>
+            <option value="3">Mittwoch</option>
+            <option value="4">Donnerstag</option>
+            <option value="5">Freitag</option>
+            <option value="6">Samstag</option>
+          </select>
+        </label>
+        
+        <label>
+          Farbe:
+          <input type="color" x-model="editZone.color" required>
+        </label>
+        
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary">Speichern</button>
+          <button type="button" @click="editZone = null" class="btn-secondary">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div x-show="loading" class="loading">Lädt...</div>
+</div>
+
+<script>
+function zonesView() {
+  return {
+    zones: [],
+    editZone: null,
+    loading: true,
+    
+    init() {
+      this.loadZones();
+    },
+    
+     async loadZones() {
+       try {
+         const response = await fetch('/api/zones');
+        const data = await response.json();
+        this.zones = data.items;
+        this.loading = false;
+      } catch (err) {
+        console.error('Failed to load zones:', err);
+        this.loading = false;
+      }
+    },
+    
+    async saveZone() {
+       try {
+         const method = this.editZone.id ? 'PATCH' : 'POST';
+         const url = this.editZone.id 
+           ? `/api/zones/${this.editZone.id}`
+           : '/api/zones';
+        
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: this.editZone.name,
+            emoji: this.editZone.emoji,
+            weekday: this.editZone.weekday,
+            color: this.editZone.color
+          })
+        });
+        
+        if (response.ok) {
+          this.editZone = null;
+          this.loadZones();
+        }
+      } catch (err) {
+        console.error('Failed to save zone:', err);
+      }
+    },
+    
+    weekdayName(day) {
+      const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+      return days[day] || '';
+    }
+  };
+}
+</script>
