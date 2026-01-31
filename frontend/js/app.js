@@ -44,7 +44,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // PocketBase client initialization (global)
-const pb = new PocketBase('http://localhost:8080');
+const pb = new PocketBase('http://localhost:8090');
 
 // Log PocketBase connection
 console.log('PocketBase client initialized:', pb.baseUrl);

@@ -4,7 +4,7 @@ test.describe('HTMX Interactions', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/*', (route) => {
       const url = route.request().url();
-      if (url.includes('/partials/') || url.includes('.js') || url.includes('.css') || url === 'http://localhost:8080/') {
+      if (url.includes('/partials/') || url.includes('.js') || url.includes('.css') || url === 'http://localhost:8090/') {
         route.continue();
       } else {
         route.abort();

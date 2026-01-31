@@ -10,7 +10,7 @@ Schweinehund uses **ntfy.sh**, a simple HTTP-based push notification service. No
 
 - Android phone (6.0 or higher)
 - WiFi or network connection to your local network where Schweinehund is running
-- Phone able to reach `http://schweinehund.local:8090` or the IP address of your Schweinehund server
+- Phone able to reach `http://localhost:8091` or the IP address of your Schweinehund server
 
 ## Step-by-Step Setup
 
@@ -28,7 +28,7 @@ Schweinehund uses **ntfy.sh**, a simple HTTP-based push notification service. No
 1. Open the **ntfy app**
 2. Tap the **"+"** button or **"Add subscription"**
 3. Enter the server URL and topic:
-   - **Server:** `http://schweinehund.local:8090` (or your server's IP, e.g., `http://192.168.1.100:8090`)
+   - **Server:** `http://localhost:8091` (or your server's IP, e.g., `http://192.168.1.100:8091`)
    - **Topic:** `schweinehund`
 4. Tap **Subscribe**
 
@@ -52,13 +52,13 @@ Once you've subscribed, test if notifications work:
 Open a terminal and send a test notification:
 
 ```bash
-curl -d "Test notification from Schweinehund!" http://localhost:8090/schweinehund
+curl -d "Test notification from Schweinehund!" http://localhost:8091/schweinehund
 ```
 
 Or if on a different machine (replace IP):
 
 ```bash
-curl -d "Test notification from Schweinehund!" http://192.168.1.100:8090/schweinehund
+curl -d "Test notification from Schweinehund!" http://192.168.1.100:8091/schweinehund
 ```
 
 You should receive a notification on your Android phone within a few seconds.
@@ -73,7 +73,7 @@ In the Schweinehund settings, there's a "Send Test Notification" button that wil
 
 1. **Check network connectivity:**
    - On your phone, open a browser
-   - Navigate to `http://schweinehund.local:8090` (or your IP)
+   - Navigate to `http://localhost:8091` (or your IP)
    - You should see the ntfy web interface
 
 2. **Check subscription:**
@@ -96,7 +96,7 @@ In the Schweinehund settings, there's a "Send Test Notification" button that wil
 - Verify you're on the same WiFi network as the Schweinehund server
 - Check if the IP address or hostname is correct
 - Ping the server: `ping schweinehund.local` (or `ping 192.168.1.100`)
-- Check firewall: Port 8090 must be accessible
+- Check firewall: Port 8091 must be accessible
 
 ### Notifications Appear But Immediately Disappear
 
@@ -136,7 +136,7 @@ If your server doesn't respond to `schweinehund.local`:
    - On Linux/Mac: `hostname -I` or `ipconfig getifaddr en0`
    - On TrueNAS: Settings → Network → IPv4 Address
 
-2. Use that IP in the ntfy app: `http://192.168.X.X:8090/schweinehund`
+2. Use that IP in the ntfy app: `http://192.168.X.X:8091/schweinehund`
 
 ## Security Note
 
@@ -146,7 +146,7 @@ Since this is a local network setup:
 - Only accessible from your local network
 - No data is sent to external servers
 
-If you want to secure the connection, set up HTTPS with self-signed certificates (Caddy/nginx reverse proxy).
+If you want to secure the connection, HTTPS is not configured for this local network setup.
 
 ## Support
 

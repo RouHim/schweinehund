@@ -1,8 +1,8 @@
 {
-  "active_plan": "/home/rouven/schweinehund/.sisyphus/plans/schweinehund.md",
-  "started_at": "2026-01-31T07:36:31.059Z",
+  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/simplify-infrastructure.md",
+  "started_at": "2026-01-31T13:27:52+01:00",
   "session_ids": [
-    "ses_3ed14783effe0WjF7Oc4i9Bt4j"
+    "ses_current_session"
   ],
-  "plan_name": "schweinehund"
+  "plan_name": "simplify-infrastructure"
 }

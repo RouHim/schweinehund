@@ -17,6 +17,7 @@ services:
       - ./pocketbase/pb_data:/pb/pb_data
       - ./pocketbase/pb_hooks:/pb/pb_hooks
       - ./pocketbase/pb_migrations:/pb/pb_migrations
+      - ./frontend:/pb/pb_public:ro
     ports:
       - "8090:8090"
     entrypoint: ["/usr/local/bin/pocketbase"]
@@ -29,37 +30,6 @@ services:
       start_period: 10s
     networks:
       - schweinehund-net
-
-  # Caddy - Reverse proxy with HTTPS termination
-  caddy:
-    image: caddy:2-alpine
-    container_name: schweinehund-caddy
-    restart: unless-stopped
-    environment:
-      - TZ=Europe/Berlin
-      - DOMAIN=${DOMAIN:-schweinehund.local}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./certs/schweinehund.local.crt:/etc/caddy/certs/schweinehund.local.crt:ro
-      - ./certs/schweinehund.local.key:/etc/caddy/certs/schweinehund.local.key:ro
-      - ./frontend:/app/frontend:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    ports:
-      - "8080:80"
-      - "8443:443"
-      - "8081:8080"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:8080/", "-O", "-"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-    networks:
-      - schweinehund-net
-    depends_on:
-      pocketbase:
-        condition: service_healthy
 
   # ntfy - Push notification service
   ntfy:
@@ -88,9 +58,3 @@ services:
 networks:
   schweinehund-net:
     driver: bridge
-
-volumes:
-  caddy_data:
-    driver: local
-  caddy_config:
-    driver: local
