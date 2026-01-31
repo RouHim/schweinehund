@@ -1,0 +1,84 @@
+version: '3.9'
+
+services:
+  # PocketBase - Go backend with built-in SQLite database
+  pocketbase:
+    image: ghcr.io/pocketbase/pocketbase:latest
+    container_name: schweinehund-pocketbase
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
+      - POCKETBASE_DEBUG=false
+    volumes:
+      - ./pb_data:/pb/pb_data
+      - ./pocketbase/pb_hooks:/pb/pb_hooks
+    ports:
+      - "8090:8090"
+    command: serve --http=0.0.0.0:8090
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - schweinehund-net
+
+  # Caddy - Reverse proxy with HTTPS termination
+  caddy:
+    image: caddy:2-alpine
+    container_name: schweinehund-caddy
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs/schweinehund.local.crt:/etc/caddy/certs/schweinehund.local.crt:ro
+      - ./certs/schweinehund.local.key:/etc/caddy/certs/schweinehund.local.key:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - schweinehund-net
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+
+  # ntfy - Push notification service
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: schweinehund-ntfy
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
+      - NTFY_BASE_URL=http://localhost:8090
+      - NTFY_CACHE_FILE=/var/lib/ntfy/cache/cache.db
+      - NTFY_AUTH_DEFAULT_ACCESS=public-read-write
+      - NTFY_WEB_ROOT=app
+    volumes:
+      - ./ntfy/cache:/var/lib/ntfy/cache
+    ports:
+      - "8090:80"
+    command: serve
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:80/v1/health", "-O", "-"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - schweinehund-net
+
+networks:
+  schweinehund-net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

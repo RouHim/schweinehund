@@ -1,0 +1,8 @@
+// PocketBase server-side hooks (Go)
+// Place hook files here for event handling and customization
+
+// Example: pb_hooks/main.go
+// This directory is mounted into the PocketBase container
+// Hooks can intercept collection operations, auth events, etc.
+
+// See: https://pocketbase.io/docs/go-overview/

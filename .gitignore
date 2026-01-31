@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+*.egg-info/
+__pycache__/
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# PocketBase
+pb_data/
+pb_migrations/
+
+# Certificates (generated locally)
+certs/
+*.crt
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+.cache/
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Docker
+.dockerignore
