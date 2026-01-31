@@ -15,6 +15,9 @@ module.exports = {
       'ci',
       'test',
       'release'
-    ]]
+    ]],
+    // Disable line length limits for semantic-release commits with long changelogs
+    'body-max-line-length': [0, 'always'],
+    'footer-max-line-length': [0, 'always']
   }
 };
