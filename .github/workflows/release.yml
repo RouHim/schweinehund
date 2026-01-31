@@ -30,20 +30,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run semantic-release
+      - name: Run semantic-release (dry-run to get version)
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          # Run semantic-release in dry-run mode and capture output
           npx semantic-release --dry-run > /tmp/semantic-output.txt 2>&1 || true
-          if grep -q "The next release version is" /tmp/semantic-output.txt; then
-            VERSION=$(grep "The next release version is" /tmp/semantic-output.txt | sed 's/.*The next release version is //' | tr -d '\n')
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "new_release=true" >> $GITHUB_OUTPUT
-            echo "Next version will be: $VERSION"
+          cat /tmp/semantic-output.txt
+          
+          # Check if a new release will be created
+          if grep -q "There is no previous release" /tmp/semantic-output.txt || grep -q "The next release version is" /tmp/semantic-output.txt; then
+            VERSION=$(grep -oP "(?<=The next release version is )\S+" /tmp/semantic-output.txt | head -1 | tr -d '\n')
+            if [ -z "$VERSION" ]; then
+              # First release case
+              VERSION=$(grep -oP "(?<=next release version is )\S+" /tmp/semantic-output.txt | head -1 | tr -d '\n')
+            fi
+            if [ -n "$VERSION" ]; then
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "new_release=true" >> $GITHUB_OUTPUT
+              echo "✅ Next version will be: $VERSION"
+            else
+              echo "new_release=false" >> $GITHUB_OUTPUT
+              echo "❌ Could not determine version"
+            fi
           else
             echo "new_release=false" >> $GITHUB_OUTPUT
-            echo "No new release needed"
+            echo "ℹ️  No new release needed (no relevant commits)"
           fi
 
       - name: Set up Docker Buildx
