@@ -3,23 +3,30 @@ version: '3.9'
 services:
   # PocketBase - Go backend with built-in SQLite database
   pocketbase:
-    image: ghcr.io/pocketbase/pocketbase:latest
+    build:
+      context: ./pocketbase
+      dockerfile: Dockerfile
+    image: schweinehund-pocketbase:local
     container_name: schweinehund-pocketbase
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
       - POCKETBASE_DEBUG=false
+      - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-default-encryption-key-change-in-production}
     volumes:
       - ./pocketbase/pb_data:/pb/pb_data
       - ./pocketbase/pb_hooks:/pb/pb_hooks
+      - ./pocketbase/pb_migrations:/pb/pb_migrations
     ports:
       - "8090:8090"
-    command: serve --http=0.0.0.0:8090
+    entrypoint: ["/usr/local/bin/pocketbase"]
+    command: ["serve", "--http=0.0.0.0:8090"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/api/health"]
+      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:8090/api/health", "-O", "-"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
     networks:
       - schweinehund-net
 
@@ -30,21 +37,24 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
+      - DOMAIN=${DOMAIN:-schweinehund.local}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./certs/schweinehund.local.crt:/etc/caddy/certs/schweinehund.local.crt:ro
       - ./certs/schweinehund.local.key:/etc/caddy/certs/schweinehund.local.key:ro
+      - ./frontend:/app/frontend:ro
       - caddy_data:/data
       - caddy_config:/config
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
+      - "8080:80"
+      - "8443:443"
+      - "8081:8080"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 10s
+      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:8080/", "-O", "-"]
+      interval: 15s
       timeout: 5s
       retries: 3
+      start_period: 5s
     networks:
       - schweinehund-net
     depends_on:
@@ -58,9 +68,8 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
-      - NTFY_BASE_URL=http://localhost:8091
+      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://schweinehund.local:8091}
       - NTFY_CACHE_FILE=/var/lib/ntfy/cache/cache.db
-      - NTFY_AUTH_DEFAULT_ACCESS=public-read-write
       - NTFY_WEB_ROOT=app
     volumes:
       - ./ntfy/cache:/var/lib/ntfy/cache
@@ -72,6 +81,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 5s
     networks:
       - schweinehund-net
 
@@ -81,4 +91,6 @@ networks:
 
 volumes:
   caddy_data:
+    driver: local
   caddy_config:
+    driver: local

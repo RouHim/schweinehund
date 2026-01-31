@@ -5,7 +5,7 @@
 }
 
 # HTTPS configuration for schweinehund.local
-https://schweinehund.local:8080 {
+https://schweinehund.local:8081 {
   tls /etc/caddy/certs/schweinehund.local.crt /etc/caddy/certs/schweinehund.local.key
 
   # Route to PocketBase API
@@ -30,6 +30,6 @@ https://schweinehund.local:8080 {
 }
 
 # HTTP to HTTPS redirect (optional, for local testing)
-http://schweinehund.local {
-  redir https://schweinehund.local:8080{uri}
+http://schweinehund.local:8080 {
+  redir https://schweinehund.local:8081{uri}
 }
