@@ -21,7 +21,7 @@ services:
     ports:
       - "8090:8090"
     entrypoint: ["/usr/local/bin/pocketbase"]
-    command: ["serve", "--http=0.0.0.0:8090"]
+    command: ["serve", "--http=0.0.0.0:8090", "--publicDir=/pb/pb_public"]
     healthcheck:
       test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:8090/api/health", "-O", "-"]
       interval: 10s
