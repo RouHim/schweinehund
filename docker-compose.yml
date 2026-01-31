@@ -32,7 +32,7 @@ services:
 
   # Caddy - Reverse proxy with HTTPS termination
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2-alpine@sha256:d266901f6e0c9d74528463654b7e872e6af8f6bbe23ca13576a1fb601202f8da
     container_name: schweinehund-caddy
     restart: unless-stopped
     environment:
@@ -63,7 +63,7 @@ services:
 
   # ntfy - Push notification service
   ntfy:
-    image: binwiederhier/ntfy:latest
+    image: binwiederhier/ntfy:latest@sha256:115357a63dd35e3d08ad03c93ade7d7eef63761726572b809da13f2999f1958f
     container_name: schweinehund-ntfy
     restart: unless-stopped
     environment:
