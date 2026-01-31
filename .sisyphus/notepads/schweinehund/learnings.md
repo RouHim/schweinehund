@@ -150,3 +150,91 @@ if (url.pathname.includes('/api/realtime')) {
 ✅ Theme color: `#FF7F50`, Background: `#FFF5E6`  
 ✅ Icons: 192px and 512px PNGs with maskable purpose  
 ✅ Realtime endpoint skip logic confirmed
+
+## Wave 2: PocketBase Schema & Data Seeding
+
+### ✅ Successful Patterns
+
+**Bootstrap Hook for Schema**: Used `onBootstrap((e) => { e.next(); ... })` JavaScript hook to create collections programmatically on first startup. Schema defined inline with Collection constructor (fields, indexes, API rules).
+
+**Public API Access**: Set all API rules to empty string `''` for public read/write without authentication. Perfect for local PWA without user management overhead.
+
+**Standalone Binary Deployment**: Downloaded PocketBase v0.36.1 binary directly instead of Docker (registry auth issues). Binary runs with `./pocketbase serve --http=127.0.0.1:8090` and auto-creates `pb_data/` SQLite database.
+
+**External Seeding Script**: Data seeding via bash script using curl POST requests after server startup. Hook-based seeding failed due to transaction timing (collections created but not queryable within same bootstrap hook).
+
+**Collections Created**:
+- **zones**: name (text), emoji (text), weekday (number 0-6), color (hex string). Unique index on weekday.
+- **tasks**: name (text), emoji (text), zone (relation), is_daily (bool), completed (bool), completed_at (date), sort_order (number). Public CRUD.
+- **settings**: key (text unique), value (json). Reserved for app configuration.
+
+**Schema Hook Structure**: Checked existing collections via `$app.findAllCollections()` to avoid recreating on restart. Each collection uses `$app.save(collection)` to persist.
+
+### ⚠️ Gotchas Avoided
+
+- ❌ Seeding within `onBootstrap` hook (collections not queryable in same transaction)
+- ❌ Number field with `required: true` and value `0` (PocketBase treats 0 as blank) → Changed to `required: false`
+- ❌ Using Docker images (network auth issues) → Switched to standalone binary
+- ❌ Port conflict between PocketBase and ntfy (both 8090) → Fixed in docker-compose.yml
+
+### 📋 Configuration Decisions
+
+| Component | Choice | Why |
+|-----------|--------|-----|
+| PocketBase Version | v0.36.1 standalone | Latest stable, no Docker registry dependency |
+| Schema Management | JavaScript hooks (.pb.js) | Runtime schema creation, version controlled |
+| Data Seeding | Bash script + curl | Reliable, repeatable, Docker-compatible |
+| Weekday Storage | 0-6 (Su-Sa) | ISO standard, but required: false to allow 0 |
+| Zone Colors | Hex strings (#9333EA, etc.) | CSS-ready, no conversion needed |
+| API Auth | None (public CRUD) | Local-only PWA, no user accounts |
+
+### 🔍 Architecture Notes
+
+**Hook Execution Order**: `onBootstrap` runs before server accepts connections. Collections created synchronously but NOT immediately queryable (transaction boundary). Use `onCollectionAfterCreateSuccess` for post-creation logic.
+
+**Number Field Validation**: PocketBase `required: true` validation rejects `0` as "blank" for number fields. Workaround: Use `required: false` with `min: 0` or shift range (1-7 instead of 0-6).
+
+**Relation Fields**: `zone` field in `tasks` uses `collectionId` (not collection name). `cascadeDelete: false` prevents deleting tasks when zone deleted. `maxSelect: 1` enforces single zone per task.
+
+**Unique Indexes**: Created via `indexes: ['CREATE UNIQUE INDEX idx_zones_weekday ON zones (weekday)']` in Collection constructor. Prevents duplicate weekday entries.
+
+**Data Seeding Flow**:
+1. PocketBase starts → hooks create schema
+2. Bash script queries zones by weekday filter
+3. Script injects zone IDs into task JSON payloads
+4. curl POST to `/api/collections/{name}/records`
+
+### 🧪 Validation Results
+
+✅ 7 zones created (weekdays 0-6)  
+✅ 26 tasks created (6 daily + 20 weekly zone tasks)  
+✅ Public API accessible without auth tokens  
+✅ `curl http://127.0.0.1:8090/api/collections/zones/records` returns 7 items  
+✅ `curl http://127.0.0.1:8090/api/collections/tasks/records` returns 26 items  
+✅ Relation field populated correctly (zone IDs in tasks)  
+✅ PocketBase binary v0.36.1 running stable
+
+### 🚀 Next Wave Preparation
+
+1. **Frontend Integration**: `apiCall()` function in `main.js` needs PocketBase SDK or fetch wrappers
+2. **Task Rotation Logic**: Daily reset + zone-based task rotation (Go hooks or frontend)
+3. **ntfy Push Notifications**: Trigger on task completion or daily reset
+4. **Admin UI**: PocketBase dashboard at `http://127.0.0.1:8090/_/` (requires superuser creation)
+5. **Backup Strategy**: `pb_data/data.db` SQLite file persistence in Docker volume
+
+## Conventions & Patterns
+
+- **Hook Files**: Named `*.pb.js` in `pocketbase/pb_hooks/` directory
+- **Seeding**: Separate bash script `seed.sh` for idempotent data insertion
+- **TypeScript Hints**: `/// <reference path="../pb_data/types.d.ts" />` for PocketBase API autocomplete
+- **API Endpoint Pattern**: `/api/collections/{name}/records` for CRUD operations
+- **JSON Field Values**: Use single quotes for shell strings, double for JSON keys
+
+## Architecture Decisions
+
+- **No Authentication Layer**: Simplified local PWA without user accounts (trust device access)
+- **Schema via Hooks**: Runtime collection creation instead of migrations (simpler for small projects)
+- **Bash for Seeding**: More reliable than JS hooks for data insertion (transaction isolation)
+- **Standalone Binary**: Avoid Docker complexity during development (switch to container for TrueNAS)
+- **Weekday as Number**: Enables easy JavaScript `new Date().getDay()` comparison
+- **Emoji in Data**: Stored as text fields (not file uploads) for instant rendering

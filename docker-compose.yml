@@ -10,7 +10,7 @@ services:
       - TZ=Europe/Berlin
       - POCKETBASE_DEBUG=false
     volumes:
-      - ./pb_data:/pb/pb_data
+      - ./pocketbase/pb_data:/pb/pb_data
       - ./pocketbase/pb_hooks:/pb/pb_hooks
     ports:
       - "8090:8090"
@@ -58,14 +58,14 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
-      - NTFY_BASE_URL=http://localhost:8090
+      - NTFY_BASE_URL=http://localhost:8091
       - NTFY_CACHE_FILE=/var/lib/ntfy/cache/cache.db
       - NTFY_AUTH_DEFAULT_ACCESS=public-read-write
       - NTFY_WEB_ROOT=app
     volumes:
       - ./ntfy/cache:/var/lib/ntfy/cache
     ports:
-      - "8090:80"
+      - "8091:80"
     command: serve
     healthcheck:
       test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:80/v1/health", "-O", "-"]
