@@ -1,0 +1,30 @@
+# ntfy.sh Server Configuration
+# For local self-hosted push notifications
+
+# Base URL for the service (used in notification links)
+base-url: http://localhost:8090
+
+# Listening address and port
+listen-http: 0.0.0.0:80
+
+# Cache settings for local persistence
+cache-file: /var/lib/ntfy/cache/cache.db
+cache-duration: 168h  # Keep messages for a week
+
+# Authorization - disable for local use (open network only)
+auth-default-access: public-read-write
+
+# Attachment settings (disable for now)
+attachment-cache-dir: /var/lib/ntfy/cache/attachments
+attachment-total-size-limit: 5GB
+attachment-file-size-limit: 4GB
+
+# Visitor rate limiting (local use)
+visitor-request-limit-burst: 60
+visitor-request-limit-replenish: 5s
+
+# Web UI enabled
+web-root: app
+
+# Log level
+log-level: info
