@@ -71,9 +71,9 @@ function zonesView() {
       this.loadZones();
     },
     
-    async loadZones() {
-      try {
-        const response = await fetch('/api/collections/zones/records?perPage=10&sort=weekday');
+     async loadZones() {
+       try {
+         const response = await fetch('/api/zones');
         const data = await response.json();
         this.zones = data.items;
         this.loading = false;
@@ -84,11 +84,11 @@ function zonesView() {
     },
     
     async saveZone() {
-      try {
-        const method = this.editZone.id ? 'PATCH' : 'POST';
-        const url = this.editZone.id 
-          ? `/api/collections/zones/records/${this.editZone.id}`
-          : '/api/collections/zones/records';
+       try {
+         const method = this.editZone.id ? 'PATCH' : 'POST';
+         const url = this.editZone.id 
+           ? `/api/zones/${this.editZone.id}`
+           : '/api/zones';
         
         const response = await fetch(url, {
           method,

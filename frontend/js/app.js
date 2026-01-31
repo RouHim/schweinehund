@@ -43,12 +43,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// PocketBase client initialization (global)
-const pb = new PocketBase('http://localhost:8090');
-
-// Log PocketBase connection
-console.log('PocketBase client initialized:', pb.baseUrl);
-
 // HTMX configuration (optional but useful)
 document.addEventListener('htmx:configRequest', (event) => {
   // Add any custom headers here if needed

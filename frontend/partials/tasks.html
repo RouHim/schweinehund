@@ -57,9 +57,9 @@ function tasksView() {
       this.loadTasks();
     },
     
-    async loadTasks() {
-      try {
-        const response = await fetch('/api/collections/tasks/records?perPage=100&sort=sort_order');
+     async loadTasks() {
+       try {
+         const response = await fetch('/api/tasks');
         const data = await response.json();
         
         this.dailyTasks = data.items.filter(t => t.is_daily);
@@ -74,7 +74,7 @@ function tasksView() {
     async toggleTask(task) {
       try {
         const newCompleted = !task.completed;
-        const response = await fetch(`/api/collections/tasks/records/${task.id}`, {
+         const response = await fetch(`/api/tasks/${task.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

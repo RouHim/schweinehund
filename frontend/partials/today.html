@@ -78,10 +78,10 @@ function todayView() {
       try {
         const today = new Date().getDay();
         
-        const [tasksResp, zonesResp] = await Promise.all([
-          fetch('/api/collections/tasks/records?perPage=100'),
-          fetch('/api/collections/zones/records?perPage=10')
-        ]);
+         const [tasksResp, zonesResp] = await Promise.all([
+           fetch('/api/tasks'),
+           fetch('/api/zones')
+         ]);
         
         const tasks = await tasksResp.json();
         const zones = await zonesResp.json();
@@ -107,7 +107,7 @@ function todayView() {
     async toggleTask(task) {
       try {
         const newCompleted = !task.completed;
-        const response = await fetch(`/api/collections/tasks/records/${task.id}`, {
+         const response = await fetch(`/api/tasks/${task.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

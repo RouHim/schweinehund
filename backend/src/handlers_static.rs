@@ -1,0 +1,1 @@
+// Static file handlers module
