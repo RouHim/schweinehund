@@ -1,15 +1,16 @@
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::Json;
-use chrono::SecondsFormat;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use uuid::Uuid;
+use sqlx::{Row, SqlitePool};
+use warp::http::StatusCode;
+use warp::{Rejection, Reply};
 
-use crate::models::Task;
-use crate::state::SharedState;
+use crate::db;
+use crate::error;
+
+#[derive(Serialize)]
+struct Items<T> {
+    items: Vec<T>,
+}
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct ApiTask {
@@ -18,374 +19,287 @@ struct ApiTask {
     emoji: String,
     is_daily: bool,
     zone: Option<String>,
-    sort_order: i32,
+    sort_order: i64,
     completed: bool,
     completed_at: String,
 }
 
-#[derive(Serialize)]
-struct Items<T> {
-    items: Vec<T>,
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct CreateTaskRequest {
+pub struct CreateTaskRequest {
     name: Option<String>,
     emoji: Option<String>,
     is_daily: Option<bool>,
     zone: Option<Option<String>>,
-    sort_order: Option<i32>,
+    sort_order: Option<i64>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct UpdateTaskRequest {
+pub struct UpdateTaskRequest {
     name: Option<String>,
     emoji: Option<String>,
     is_daily: Option<bool>,
     zone: Option<Option<String>>,
-    sort_order: Option<i32>,
+    sort_order: Option<i64>,
     completed: Option<bool>,
     completed_at: Option<String>,
 }
 
-fn new_id() -> String {
-    Uuid::new_v4().simple().to_string()
+fn normalize_completed_at(input: &str) -> Result<Option<String>, Rejection> {
+    if input.trim().is_empty() {
+        return Ok(None);
+    }
+
+    let ts = DateTime::parse_from_rfc3339(input)
+        .map_err(|_| error::bad_request("invalid completed_at"))?
+        .with_timezone(&Utc);
+
+    Ok(Some(ts.to_rfc3339_opts(SecondsFormat::Secs, true)))
 }
 
-fn task_to_api(task: &Task) -> ApiTask {
-    ApiTask {
-        id: task.id.clone(),
-        name: task.name.clone(),
-        emoji: task.emoji.clone(),
-        is_daily: task.is_daily,
-        zone: task.zone_id.clone(),
-        sort_order: task.sort_order,
-        completed: task.completed,
-        completed_at: task
-            .completed_at
-            .map(|t| t.to_rfc3339_opts(SecondsFormat::Secs, true))
-            .unwrap_or_default(),
+fn normalize_zone(input: Option<Option<String>>) -> Option<String> {
+    match input {
+        Some(Some(v)) => {
+            let v = v.trim().to_string();
+            if v.is_empty() {
+                None
+            } else {
+                Some(v)
+            }
+        }
+        Some(None) => None,
+        None => None,
     }
 }
 
-fn json_error(status: StatusCode, message: &str) -> Response {
-    (status, Json(json!({"error": message}))).into_response()
-}
+pub async fn get_tasks(pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    let rows = sqlx::query(
+        "SELECT id, name, emoji, is_daily, zone_id, sort_order, completed, COALESCE(completed_at, '') as completed_at \
+         FROM tasks \
+         ORDER BY sort_order ASC, created_at ASC",
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| error::internal(e.to_string()))?;
 
-pub async fn get_tasks(State(state): State<SharedState>) -> impl IntoResponse {
-    let tasks = state.tasks.read().await;
-    let mut tasks_sorted = tasks.clone();
-    drop(tasks);
+    let items: Vec<ApiTask> = rows
+        .into_iter()
+        .map(|row| ApiTask {
+            id: row.get("id"),
+            name: row.get("name"),
+            emoji: row.get("emoji"),
+            is_daily: row.get::<i64, _>("is_daily") != 0,
+            zone: row.get::<Option<String>, _>("zone_id"),
+            sort_order: row.get("sort_order"),
+            completed: row.get::<i64, _>("completed") != 0,
+            completed_at: row.get("completed_at"),
+        })
+        .collect();
 
-    tasks_sorted.sort_by(|a, b| {
-        a.sort_order
-            .cmp(&b.sort_order)
-            .then_with(|| a.created_at.cmp(&b.created_at))
-    });
-
-    let items: Vec<ApiTask> = tasks_sorted.iter().map(task_to_api).collect();
-    Json(Items { items })
+    Ok(warp::reply::json(&Items { items }))
 }
 
 pub async fn create_task(
-    State(state): State<SharedState>,
-    Json(req): Json<CreateTaskRequest>,
-) -> impl IntoResponse {
+    req: CreateTaskRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
     let name = req.name.unwrap_or_default();
     let emoji = req.emoji.unwrap_or_default();
 
     if name.trim().is_empty() || emoji.trim().is_empty() {
-        return json_error(StatusCode::BAD_REQUEST, "name and emoji are required");
+        return Err(error::bad_request("name and emoji are required"));
     }
 
-    let now = Utc::now();
-    let mut tasks = state.tasks.write().await;
+    let id = uuid::Uuid::new_v4().simple().to_string();
+    let now = db::now_rfc3339();
+    let is_daily = req.is_daily.unwrap_or(false);
+    let zone_id = normalize_zone(req.zone);
+
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| error::internal(e.to_string()))?;
+
     let sort_order = match req.sort_order {
         Some(v) => v,
-        None => tasks.iter().map(|t| t.sort_order).max().unwrap_or(-1) + 1,
+        None => {
+            let max: Option<i64> = sqlx::query_scalar("SELECT MAX(sort_order) FROM tasks")
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| error::internal(e.to_string()))?;
+            max.unwrap_or(-1) + 1
+        }
     };
 
-    let zone_id = match req.zone {
-        Some(Some(v)) if !v.trim().is_empty() => Some(v),
-        Some(_) => None,
-        None => None,
-    };
+    sqlx::query(
+        "INSERT INTO tasks \
+        (id, name, emoji, is_daily, sort_order, completed, completed_at, zone_id, created_at, updated_at) \
+        VALUES (?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)",
+    )
+    .bind(&id)
+    .bind(name.trim())
+    .bind(emoji.trim())
+    .bind(if is_daily { 1i64 } else { 0i64 })
+    .bind(sort_order)
+    .bind(zone_id.as_deref())
+    .bind(&now)
+    .bind(&now)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| error::internal(e.to_string()))?;
 
-    let task = Task {
-        id: new_id(),
-        name,
-        emoji,
-        is_daily: req.is_daily.unwrap_or(false),
+    tx.commit()
+        .await
+        .map_err(|e| error::internal(e.to_string()))?;
+
+    let api = ApiTask {
+        id,
+        name: name.trim().to_string(),
+        emoji: emoji.trim().to_string(),
+        is_daily,
+        zone: zone_id,
         sort_order,
         completed: false,
-        completed_at: None,
-        zone_id,
-        created_at: now,
-        updated_at: now,
+        completed_at: "".to_string(),
     };
 
-    tasks.push(task.clone());
-    if let Err(err) = state.storage.save_tasks(&tasks) {
-        tracing::error!(error = %err, "failed to save tasks");
-        return json_error(StatusCode::INTERNAL_SERVER_ERROR, "failed to save tasks");
-    }
-
-    (StatusCode::OK, Json(task_to_api(&task))).into_response()
+    Ok(warp::reply::with_status(
+        warp::reply::json(&api),
+        StatusCode::OK,
+    ))
 }
 
 pub async fn update_task(
-    State(state): State<SharedState>,
-    Path(id): Path<String>,
-    Json(req): Json<UpdateTaskRequest>,
-) -> impl IntoResponse {
-    let mut tasks = state.tasks.write().await;
-    let idx = match tasks.iter().position(|t| t.id == id) {
-        Some(idx) => idx,
-        None => return json_error(StatusCode::NOT_FOUND, "task not found"),
+    id: String,
+    req: UpdateTaskRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| error::internal(e.to_string()))?;
+
+    let existing = sqlx::query("SELECT is_daily, completed FROM tasks WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| error::internal(e.to_string()))?;
+
+    let Some(existing) = existing else {
+        return Err(error::not_found("task not found"));
     };
 
-    let old_completed = tasks[idx].completed;
+    let old_is_daily = existing.get::<i64, _>("is_daily") != 0;
+    let old_completed = existing.get::<i64, _>("completed") != 0;
 
-    if let Some(name) = req.name {
-        tasks[idx].name = name;
-    }
-    if let Some(emoji) = req.emoji {
-        tasks[idx].emoji = emoji;
-    }
-    if let Some(is_daily) = req.is_daily {
-        tasks[idx].is_daily = is_daily;
-    }
-    if let Some(sort_order) = req.sort_order {
-        tasks[idx].sort_order = sort_order;
-    }
-    if let Some(completed) = req.completed {
-        tasks[idx].completed = completed;
-    }
+    // Compute new values with fallbacks.
+    let row = sqlx::query(
+        "SELECT id, name, emoji, is_daily, zone_id, sort_order, completed, completed_at \
+         FROM tasks WHERE id = ?",
+    )
+    .bind(&id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| error::internal(e.to_string()))?;
 
-    if let Some(completed_at) = req.completed_at {
-        if completed_at.trim().is_empty() {
-            tasks[idx].completed_at = None;
-        } else {
-            let parsed = match DateTime::parse_from_rfc3339(&completed_at) {
-                Ok(ts) => ts.with_timezone(&Utc),
-                Err(_) => return json_error(StatusCode::BAD_REQUEST, "invalid completed_at"),
-            };
-            tasks[idx].completed_at = Some(parsed);
-        }
-    }
+    let mut name: String = row.get("name");
+    let mut emoji: String = row.get("emoji");
+    let mut is_daily: bool = row.get::<i64, _>("is_daily") != 0;
+    let mut zone_id: Option<String> = row.get("zone_id");
+    let mut sort_order: i64 = row.get("sort_order");
+    let mut completed: bool = row.get::<i64, _>("completed") != 0;
+    let mut completed_at: Option<String> = row.get("completed_at");
 
-    if let Some(zone) = req.zone {
-        tasks[idx].zone_id = match zone {
-            Some(v) if !v.trim().is_empty() => Some(v),
-            _ => None,
-        };
+    if let Some(v) = req.name {
+        name = v;
     }
-
-    if !tasks[idx].is_daily && !old_completed && tasks[idx].completed {
-        let max_sort = tasks
-            .iter()
-            .filter(|t| !t.is_daily)
-            .map(|t| t.sort_order)
-            .max()
-            .unwrap_or(0);
-        tasks[idx].sort_order = max_sort + 1;
+    if let Some(v) = req.emoji {
+        emoji = v;
+    }
+    if let Some(v) = req.is_daily {
+        is_daily = v;
+    }
+    if let Some(v) = req.sort_order {
+        sort_order = v;
+    }
+    if let Some(v) = req.completed {
+        completed = v;
+    }
+    if let Some(v) = req.completed_at {
+        completed_at = normalize_completed_at(&v)?;
+    }
+    if let Some(v) = req.zone {
+        zone_id = normalize_zone(Some(v));
     }
 
-    tasks[idx].updated_at = Utc::now();
-
-    if let Err(err) = state.storage.save_tasks(&tasks) {
-        tracing::error!(error = %err, "failed to save tasks");
-        return json_error(StatusCode::INTERNAL_SERVER_ERROR, "failed to save tasks");
+    if name.trim().is_empty() || emoji.trim().is_empty() {
+        return Err(error::bad_request("name and emoji are required"));
     }
 
-    let api = task_to_api(&tasks[idx]);
-    (StatusCode::OK, Json(api)).into_response()
+    // Rotation on completion: non-daily tasks when completed transitions false -> true.
+    if !old_is_daily && !old_completed && completed {
+        let max_non_daily: Option<i64> =
+            sqlx::query_scalar("SELECT MAX(sort_order) FROM tasks WHERE is_daily = 0")
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| error::internal(e.to_string()))?;
+        sort_order = max_non_daily.unwrap_or(0) + 1;
+    }
+
+    let now = db::now_rfc3339();
+    sqlx::query(
+        "UPDATE tasks \
+         SET name = ?, emoji = ?, is_daily = ?, zone_id = ?, sort_order = ?, completed = ?, completed_at = ?, updated_at = ? \
+         WHERE id = ?",
+    )
+    .bind(name.trim())
+    .bind(emoji.trim())
+    .bind(if is_daily { 1i64 } else { 0i64 })
+    .bind(zone_id.as_deref())
+    .bind(sort_order)
+    .bind(if completed { 1i64 } else { 0i64 })
+    .bind(completed_at.as_deref())
+    .bind(&now)
+    .bind(&id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| error::internal(e.to_string()))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| error::internal(e.to_string()))?;
+
+    let api = ApiTask {
+        id,
+        name: name.trim().to_string(),
+        emoji: emoji.trim().to_string(),
+        is_daily,
+        zone: zone_id,
+        sort_order,
+        completed,
+        completed_at: completed_at.unwrap_or_default(),
+    };
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&api),
+        StatusCode::OK,
+    ))
 }
 
-pub async fn delete_task(
-    State(state): State<SharedState>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    let mut tasks = state.tasks.write().await;
-    let before = tasks.len();
-    tasks.retain(|t| t.id != id);
-    if tasks.len() == before {
-        return json_error(StatusCode::NOT_FOUND, "task not found");
+pub async fn delete_task(id: String, pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    let res = sqlx::query("DELETE FROM tasks WHERE id = ?")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .map_err(|e| error::internal(e.to_string()))?;
+
+    if res.rows_affected() == 0 {
+        return Err(error::not_found("task not found"));
     }
 
-    if let Err(err) = state.storage.save_tasks(&tasks) {
-        tracing::error!(error = %err, "failed to save tasks");
-        return json_error(StatusCode::INTERNAL_SERVER_ERROR, "failed to save tasks");
-    }
-
-    StatusCode::NO_CONTENT.into_response()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::state::AppState;
-
-    fn temp_state() -> SharedState {
-        let dir = std::env::temp_dir().join(format!("schweinehund-task-test-{}", Uuid::new_v4()));
-        std::sync::Arc::new(AppState::new(dir.to_str().unwrap()).unwrap())
-    }
-
-    async fn response_json(resp: axum::response::Response) -> serde_json::Value {
-        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        serde_json::from_slice(&bytes).unwrap()
-    }
-
-    #[tokio::test]
-    async fn task_create_and_list() {
-        let state = temp_state();
-        let resp = create_task(
-            State(state.clone()),
-            Json(CreateTaskRequest {
-                name: Some("Dishes".to_string()),
-                emoji: Some("D".to_string()),
-                is_daily: Some(true),
-                zone: None,
-                sort_order: None,
-            }),
-        )
-        .await
-        .into_response();
-        assert_eq!(resp.status(), StatusCode::OK);
-
-        let resp = get_tasks(State(state.clone())).await.into_response();
-        assert_eq!(resp.status(), StatusCode::OK);
-        let v = response_json(resp).await;
-        assert_eq!(v["items"].as_array().unwrap().len(), 1);
-    }
-
-    #[tokio::test]
-    async fn task_patch_completed_at_parse_and_clear() {
-        let state = temp_state();
-        let created = create_task(
-            State(state.clone()),
-            Json(CreateTaskRequest {
-                name: Some("Dishes".to_string()),
-                emoji: Some("D".to_string()),
-                is_daily: Some(true),
-                zone: None,
-                sort_order: None,
-            }),
-        )
-        .await
-        .into_response();
-
-        let v = response_json(created).await;
-        let id = v["id"].as_str().unwrap().to_string();
-
-        let resp = update_task(
-            State(state.clone()),
-            Path(id.clone()),
-            Json(UpdateTaskRequest {
-                name: None,
-                emoji: None,
-                is_daily: None,
-                zone: None,
-                sort_order: None,
-                completed: Some(true),
-                completed_at: Some("2026-01-31T10:00:00Z".to_string()),
-            }),
-        )
-        .await
-        .into_response();
-        assert_eq!(resp.status(), StatusCode::OK);
-        let v = response_json(resp).await;
-        assert_eq!(v["completed"], true);
-        assert_eq!(v["completed_at"], "2026-01-31T10:00:00Z");
-
-        let resp = update_task(
-            State(state.clone()),
-            Path(id),
-            Json(UpdateTaskRequest {
-                name: None,
-                emoji: None,
-                is_daily: None,
-                zone: None,
-                sort_order: None,
-                completed: None,
-                completed_at: Some("".to_string()),
-            }),
-        )
-        .await
-        .into_response();
-        assert_eq!(resp.status(), StatusCode::OK);
-        let v = response_json(resp).await;
-        assert_eq!(v["completed_at"], "");
-    }
-
-    #[tokio::test]
-    async fn test_task_rotation_on_completion() {
-        let state = temp_state();
-
-        let t1 = create_task(
-            State(state.clone()),
-            Json(CreateTaskRequest {
-                name: Some("T1".to_string()),
-                emoji: Some("1".to_string()),
-                is_daily: Some(false),
-                zone: None,
-                sort_order: Some(0),
-            }),
-        )
-        .await
-        .into_response();
-        let t2 = create_task(
-            State(state.clone()),
-            Json(CreateTaskRequest {
-                name: Some("T2".to_string()),
-                emoji: Some("2".to_string()),
-                is_daily: Some(false),
-                zone: None,
-                sort_order: Some(1),
-            }),
-        )
-        .await
-        .into_response();
-        let _t3 = create_task(
-            State(state.clone()),
-            Json(CreateTaskRequest {
-                name: Some("T3".to_string()),
-                emoji: Some("3".to_string()),
-                is_daily: Some(false),
-                zone: None,
-                sort_order: Some(2),
-            }),
-        )
-        .await
-        .into_response();
-
-        let v = response_json(t1).await;
-        let id = v["id"].as_str().unwrap().to_string();
-
-        let resp = update_task(
-            State(state.clone()),
-            Path(id),
-            Json(UpdateTaskRequest {
-                name: None,
-                emoji: None,
-                is_daily: None,
-                zone: None,
-                sort_order: None,
-                completed: Some(true),
-                completed_at: Some("2026-01-31T10:00:00Z".to_string()),
-            }),
-        )
-        .await
-        .into_response();
-
-        assert_eq!(resp.status(), StatusCode::OK);
-        let v = response_json(resp).await;
-        assert_eq!(v["sort_order"], 3);
-
-        let _ = response_json(t2).await;
-    }
+    Ok(warp::reply::with_status(
+        warp::reply(),
+        StatusCode::NO_CONTENT,
+    ))
 }

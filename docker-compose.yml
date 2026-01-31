@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
-      - DATA_DIR=/app/data
+      - DATABASE_URL=sqlite:/app/data/schweinehund.sqlite
       - NTFY_URL=http://ntfy:80/schweinehund
     volumes:
       - ./data:/app/data

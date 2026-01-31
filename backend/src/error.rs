@@ -1,45 +1,73 @@
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::Json;
-use serde_json::json;
+use std::convert::Infallible;
 
-#[derive(Debug, thiserror::Error)]
-#[allow(dead_code)]
-pub enum AppError {
-    #[error("not found")]
-    NotFound,
-    #[error("bad request: {0}")]
-    BadRequest(String),
-    #[error("internal error: {0}")]
-    Internal(String),
+use serde::Serialize;
+use warp::http::StatusCode;
+use warp::{Rejection, Reply};
+
+#[derive(Debug)]
+pub struct ApiError {
+    pub status: StatusCode,
+    pub message: String,
 }
 
-impl AppError {
-    #[allow(dead_code)]
-    pub fn bad_request(message: impl Into<String>) -> Self {
-        Self::BadRequest(message.into())
-    }
+impl warp::reject::Reject for ApiError {}
 
-    #[allow(dead_code)]
-    pub fn internal(message: impl Into<String>) -> Self {
-        Self::Internal(message.into())
-    }
+#[derive(Serialize)]
+struct ErrorBody {
+    error: String,
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        match self {
-            AppError::NotFound => {
-                (StatusCode::NOT_FOUND, Json(json!({"error": "not found"}))).into_response()
-            }
-            AppError::BadRequest(message) => {
-                (StatusCode::BAD_REQUEST, Json(json!({"error": message}))).into_response()
-            }
-            AppError::Internal(message) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": message})),
-            )
-                .into_response(),
-        }
+pub fn bad_request(message: impl Into<String>) -> Rejection {
+    warp::reject::custom(ApiError {
+        status: StatusCode::BAD_REQUEST,
+        message: message.into(),
+    })
+}
+
+pub fn not_found(message: impl Into<String>) -> Rejection {
+    warp::reject::custom(ApiError {
+        status: StatusCode::NOT_FOUND,
+        message: message.into(),
+    })
+}
+
+pub fn internal(message: impl Into<String>) -> Rejection {
+    warp::reject::custom(ApiError {
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+        message: message.into(),
+    })
+}
+
+pub async fn recover(rej: Rejection) -> Result<impl Reply, Infallible> {
+    if let Some(err) = rej.find::<ApiError>() {
+        let body = warp::reply::json(&ErrorBody {
+            error: err.message.clone(),
+        });
+        return Ok(warp::reply::with_status(body, err.status));
     }
+
+    if rej.is_not_found() {
+        let body = warp::reply::json(&ErrorBody {
+            error: "not found".to_string(),
+        });
+        return Ok(warp::reply::with_status(body, StatusCode::NOT_FOUND));
+    }
+
+    if rej
+        .find::<warp::filters::body::BodyDeserializeError>()
+        .is_some()
+    {
+        let body = warp::reply::json(&ErrorBody {
+            error: "invalid json".to_string(),
+        });
+        return Ok(warp::reply::with_status(body, StatusCode::BAD_REQUEST));
+    }
+
+    let body = warp::reply::json(&ErrorBody {
+        error: "internal server error".to_string(),
+    });
+    Ok(warp::reply::with_status(
+        body,
+        StatusCode::INTERNAL_SERVER_ERROR,
+    ))
 }

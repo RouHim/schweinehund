@@ -3,73 +3,74 @@ use std::time::Duration;
 
 use chrono::{Datelike, TimeZone, Utc};
 use chrono_tz::Europe::Berlin;
+use sqlx::{Row, SqlitePool};
 
-use crate::models::Zone;
+use crate::db;
 use crate::ntfy::NtfyClient;
-use crate::state::SharedState;
 
-pub fn start_scheduler(state: SharedState, ntfy: NtfyClient) {
+pub fn start_scheduler(pool: SqlitePool, ntfy: NtfyClient) {
     if env_truthy("RUN_DAILY_ON_START") {
-        let state = state.clone();
+        let pool = pool.clone();
         let ntfy = ntfy.clone();
         tokio::spawn(async move {
-            run_daily_once(&state, &ntfy).await;
+            run_daily_once(&pool, &ntfy).await;
         });
     }
 
     if env_truthy("RUN_WEEKLY_ON_START") {
-        let state = state.clone();
+        let pool = pool.clone();
         let ntfy = ntfy.clone();
         tokio::spawn(async move {
-            run_weekly_once(&state, &ntfy).await;
+            run_weekly_once(&pool, &ntfy).await;
         });
     }
 
-    tokio::spawn(daily_loop(state.clone(), ntfy.clone()));
-    tokio::spawn(weekly_loop(state, ntfy));
+    tokio::spawn(daily_loop(pool.clone(), ntfy.clone()));
+    tokio::spawn(weekly_loop(pool, ntfy));
 }
 
-pub async fn run_daily_once(state: &SharedState, ntfy: &NtfyClient) {
+pub async fn run_daily_once(pool: &SqlitePool, ntfy: &NtfyClient) {
     let weekday = Utc::now()
         .with_timezone(&Berlin)
         .weekday()
-        .num_days_from_sunday() as i32;
+        .num_days_from_sunday() as i64;
 
-    let zones = state.zones.read().await;
-    let zone = zones
-        .iter()
-        .filter(|z| z.weekday == weekday)
-        .min_by_key(|z| z.created_at);
+    let row = sqlx::query(
+        "SELECT name, emoji FROM zones WHERE weekday = ? ORDER BY created_at ASC LIMIT 1",
+    )
+    .bind(weekday)
+    .fetch_optional(pool)
+    .await;
 
-    let message = match zone {
-        Some(zone) => daily_message(zone),
-        None => "Heute ist Aufgaben-Tag!".to_string(),
+    let message = match row {
+        Ok(Some(row)) => {
+            let name: String = row.get("name");
+            let emoji: String = row.get("emoji");
+            if emoji.trim().is_empty() {
+                format!("Heute ist {} Tag!", name)
+            } else {
+                format!("Heute ist {} {} Tag!", emoji.trim(), name)
+            }
+        }
+        _ => "Heute ist Aufgaben-Tag!".to_string(),
     };
 
     ntfy.send(&message, "Schweinehund", 4, "house").await;
 }
 
-pub async fn run_weekly_once(state: &SharedState, ntfy: &NtfyClient) {
-    let now = Utc::now();
-    let mut tasks = state.tasks.write().await;
-    let mut changed = false;
+pub async fn run_weekly_once(pool: &SqlitePool, ntfy: &NtfyClient) {
+    let now = db::now_rfc3339();
 
-    for task in tasks.iter_mut() {
-        if task.is_daily {
-            if task.completed || task.completed_at.is_some() {
-                changed = true;
-            }
-            task.completed = false;
-            task.completed_at = None;
-            task.updated_at = now;
-        }
-    }
+    let res = sqlx::query(
+        "UPDATE tasks SET completed = 0, completed_at = NULL, updated_at = ? WHERE is_daily = 1",
+    )
+    .bind(&now)
+    .execute(pool)
+    .await;
 
-    if changed {
-        if let Err(err) = state.storage.save_tasks(&tasks) {
-            tracing::error!(error = %err, "weekly reset failed to save tasks");
-            return;
-        }
+    if let Err(err) = res {
+        tracing::error!(error = %err, "weekly reset failed");
+        return;
     }
 
     ntfy.send(
@@ -81,28 +82,19 @@ pub async fn run_weekly_once(state: &SharedState, ntfy: &NtfyClient) {
     .await;
 }
 
-async fn daily_loop(state: SharedState, ntfy: NtfyClient) {
+async fn daily_loop(pool: SqlitePool, ntfy: NtfyClient) {
     loop {
         let next = next_daily_utc(Utc::now());
         sleep_until(next).await;
-        run_daily_once(&state, &ntfy).await;
+        run_daily_once(&pool, &ntfy).await;
     }
 }
 
-async fn weekly_loop(state: SharedState, ntfy: NtfyClient) {
+async fn weekly_loop(pool: SqlitePool, ntfy: NtfyClient) {
     loop {
         let next = next_weekly_utc(Utc::now());
         sleep_until(next).await;
-        run_weekly_once(&state, &ntfy).await;
-    }
-}
-
-fn daily_message(zone: &Zone) -> String {
-    let emoji = zone.emoji.trim();
-    if emoji.is_empty() {
-        format!("Heute ist {} Tag!", zone.name)
-    } else {
-        format!("Heute ist {} {} Tag!", emoji, zone.name)
+        run_weekly_once(&pool, &ntfy).await;
     }
 }
 
@@ -166,12 +158,9 @@ fn berlin_datetime(
             chrono::LocalResult::None => match attempt(12) {
                 chrono::LocalResult::Single(dt) => dt,
                 chrono::LocalResult::Ambiguous(a, _) => a,
-                chrono::LocalResult::None => {
-                    // Extremely defensive fallback.
-                    attempt(0)
-                        .latest()
-                        .unwrap_or_else(|| Utc::now().with_timezone(&Berlin))
-                }
+                chrono::LocalResult::None => attempt(0)
+                    .latest()
+                    .unwrap_or_else(|| Utc::now().with_timezone(&Berlin)),
             },
         },
     }
