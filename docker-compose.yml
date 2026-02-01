@@ -17,7 +17,7 @@ services:
     ports:
       - "8090:8090"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "http://localhost:8090/api/health", "-O", "-"]
+      test: ["CMD", "wget", "-q", "--tries=1", "http://127.0.0.1:8090/api/health", "-O", "-"]
       interval: 10s
       timeout: 5s
       retries: 5
