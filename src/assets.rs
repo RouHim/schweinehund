@@ -13,6 +13,11 @@ pub fn serve_embedded() -> impl Filter<Extract = impl warp::Reply, Error = warp:
 
 async fn serve_static(path: warp::path::FullPath) -> Result<impl warp::Reply, warp::Rejection> {
     let path = path.as_str();
+    
+    if path.starts_with("/api") {
+        return Err(warp::reject::not_found());
+    }
+    
     let path = if path == "/" { "index.html" } else { &path[1..] };
 
     match Assets::get(path) {

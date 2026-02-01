@@ -4,6 +4,7 @@ use warp::Filter;
 
 mod assets;
 mod db;
+mod routes;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -11,18 +12,24 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let health = warp::path("health")
-        .and(warp::get())
-        .map(|| warp::reply::json(&serde_json::json!({"status": "ok"})));
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite:schweinehund.db".to_string());
 
+    tracing::info!("Initializing database at {}", database_url);
+    let pool = db::init_pool(&database_url).await?;
+    
+    tracing::info!("Running database migrations");
+    db::run_migrations(&pool).await?;
+
+    let api = routes::api_routes(pool);
     let static_files = assets::serve_embedded();
 
-    let routes = health.or(static_files);
+    let all_routes = api.or(static_files);
 
     let addr: SocketAddr = "127.0.0.1:3000".parse()?;
     tracing::info!("Starting server on {}", addr);
 
-    let (_, server) = warp::serve(routes)
+    let (_, server) = warp::serve(all_routes)
         .bind_with_graceful_shutdown(addr, shutdown_signal());
 
     server.await;

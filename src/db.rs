@@ -23,7 +23,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, FromRow, serde::Serialize)]
 pub struct DailyTask {
     pub id: i64,
     pub name: String,
@@ -34,7 +34,7 @@ pub struct DailyTask {
     pub completed_at: Option<i64>,
 }
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, FromRow, serde::Serialize)]
 pub struct DeepCleaningTask {
     pub id: i64,
     pub name: String,
@@ -222,6 +222,39 @@ pub async fn get_app_settings(pool: &SqlitePool) -> Result<AppSettings> {
         notification_enabled: notification_enabled.0 == "true",
         notification_time: notification_time.0,
     })
+}
+
+/// Update app settings in app_state table
+pub async fn update_app_settings(pool: &SqlitePool, settings: &AppSettings) -> Result<()> {
+    let enabled_str = if settings.notification_enabled {
+        "true"
+    } else {
+        "false"
+    };
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = ?
+        WHERE key = 'notification_enabled'
+        "#,
+    )
+    .bind(enabled_str)
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = ?
+        WHERE key = 'notification_time'
+        "#,
+    )
+    .bind(&settings.notification_time)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
