@@ -2,6 +2,8 @@ use std::net::SocketAddr;
 use tracing_subscriber::EnvFilter;
 use warp::Filter;
 
+mod assets;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -9,9 +11,12 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let health = warp::path("health")
+        .and(warp::get())
         .map(|| warp::reply::json(&serde_json::json!({"status": "ok"})));
 
-    let routes = health;
+    let static_files = assets::serve_embedded();
+
+    let routes = health.or(static_files);
 
     let addr: SocketAddr = "127.0.0.1:3000".parse()?;
     tracing::info!("Starting server on {}", addr);
