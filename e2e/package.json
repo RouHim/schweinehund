@@ -1,0 +1,21 @@
+{
+  "name": "schweinehund-e2e",
+  "version": "1.0.0",
+  "description": "E2E tests for Schweinehund household cleaning task manager",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug"
+  },
+  "keywords": [
+    "playwright",
+    "e2e",
+    "testing",
+    "schweinehund"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
