@@ -1,4 +1,4 @@
-ARG MUSL_IMAGE=ghcr.io/rust-cross/rust-musl-cross:x86_64-musl
+ARG MUSL_IMAGE=ghcr.io/rust-cross/rust-musl-cross:x86_64-musl@sha256:2a8837c43bf12e246f1ebd05191de9ee27fcd22f9ca81511ccd4cf75dc16d71c
 ARG TARGET_TRIPLE=x86_64-unknown-linux-musl
 
 # Note: Some podman setups require `podman build --arch amd64` when pulling
@@ -19,7 +19,7 @@ RUN rustup target add ${TARGET_TRIPLE} || true
 RUN cargo build --release --target ${TARGET_TRIPLE}
 RUN musl-strip target/${TARGET_TRIPLE}/release/schweinehund-backend || true
 
-FROM alpine:latest
+FROM alpine:latest@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
 
 RUN apk --no-cache add ca-certificates tzdata
 
