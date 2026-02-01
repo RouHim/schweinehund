@@ -1,0 +1,35 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+**/*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+*.rlib
+*.rmeta
+
+# Node modules (for frontend tooling if added)
+node_modules/
+dist/
+build/
+
+# Coverage
+tarpaulin-report.html
+cobertura.xml
