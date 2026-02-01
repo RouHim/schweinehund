@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Schweinehund mascot: A playful, lazy pig-dog hybrid -->
+  <defs>
+    <style>
+      .primary { fill: #FF7F66; }
+      .secondary { fill: #FF6B52; }
+      .accent { fill: #FFB5A7; }
+      .dark { fill: #2D2D2D; }
+    </style>
+  </defs>
+  
+  <!-- Body (rounded, lazy pose) -->
+  <ellipse cx="100" cy="120" rx="60" ry="45" class="primary"/>
+  
+  <!-- Head (pig-like snout) -->
+  <circle cx="100" cy="70" r="35" class="primary"/>
+  
+  <!-- Ears (floppy dog ears) -->
+  <ellipse cx="75" cy="50" rx="15" ry="25" class="secondary" transform="rotate(-20 75 50)"/>
+  <ellipse cx="125" cy="50" rx="15" ry="25" class="secondary" transform="rotate(20 125 50)"/>
+  
+  <!-- Snout (pig nose) -->
+  <ellipse cx="100" cy="80" rx="18" ry="15" class="accent"/>
+  <circle cx="95" cy="78" r="3" class="dark"/>
+  <circle cx="105" cy="78" r="3" class="dark"/>
+  
+  <!-- Eyes (sleepy/lazy expression) -->
+  <ellipse cx="88" cy="65" rx="4" ry="6" class="dark"/>
+  <ellipse cx="112" cy="65" rx="4" ry="6" class="dark"/>
+  
+  <!-- Legs (short, stubby - lazy position) -->
+  <ellipse cx="75" cy="155" rx="12" ry="18" class="secondary"/>
+  <ellipse cx="105" cy="155" rx="12" ry="18" class="secondary"/>
+  
+  <!-- Tail (curly pig tail) -->
+  <path d="M 155 115 Q 165 105, 170 115 T 180 115" stroke="#FF6B52" stroke-width="6" fill="none" stroke-linecap="round"/>
+  
+  <!-- Little paw pads -->
+  <circle cx="75" cy="165" r="4" class="accent"/>
+  <circle cx="105" cy="165" r="4" class="accent"/>
+</svg>
