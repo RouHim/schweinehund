@@ -40,7 +40,9 @@ fn with_db(pool: SqlitePool) -> impl Filter<Extract = (SqlitePool,), Error = Inf
     warp::any().map(move || pool.clone())
 }
 
-pub fn api_routes(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+pub fn api_routes(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
@@ -79,9 +81,8 @@ async fn handle_get_today_tasks(
     pool: SqlitePool,
 ) -> Result<impl Reply, Rejection> {
     let day_of_week = if let Some(day) = params.get("day_of_week") {
-        day.parse::<i64>().unwrap_or_else(|_| {
-            chrono::Local::now().weekday().num_days_from_monday() as i64
-        })
+        day.parse::<i64>()
+            .unwrap_or_else(|_| chrono::Local::now().weekday().num_days_from_monday() as i64)
     } else {
         chrono::Local::now().weekday().num_days_from_monday() as i64
     };
@@ -101,19 +102,20 @@ fn toggle_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Re
 }
 
 async fn handle_toggle_task(id: i64, pool: SqlitePool) -> Result<impl Reply, Rejection> {
-    db::toggle_task(&pool, id)
-        .await
-        .map_err(|e| {
-            if e.to_string().contains("no rows") {
-                reject::custom(NotFoundError)
-            } else {
-                reject::custom(DatabaseError)
-            }
-        })?;
+    db::toggle_task(&pool, id).await.map_err(|e| {
+        if e.to_string().contains("no rows") {
+            reject::custom(NotFoundError)
+        } else {
+            reject::custom(DatabaseError)
+        }
+    })?;
 
-    let tasks = db::get_today_tasks(&pool, chrono::Local::now().weekday().num_days_from_monday() as i64)
-        .await
-        .map_err(|_| reject::custom(DatabaseError))?;
+    let tasks = db::get_today_tasks(
+        &pool,
+        chrono::Local::now().weekday().num_days_from_monday() as i64,
+    )
+    .await
+    .map_err(|_| reject::custom(DatabaseError))?;
 
     let task = tasks
         .into_iter()
@@ -150,15 +152,13 @@ fn complete_deep_task(
 }
 
 async fn handle_complete_deep_task(id: i64, pool: SqlitePool) -> Result<impl Reply, Rejection> {
-    db::complete_deep_task(&pool, id)
-        .await
-        .map_err(|e| {
-            if e.to_string().contains("no rows") {
-                reject::custom(NotFoundError)
-            } else {
-                reject::custom(DatabaseError)
-            }
-        })?;
+    db::complete_deep_task(&pool, id).await.map_err(|e| {
+        if e.to_string().contains("no rows") {
+            reject::custom(NotFoundError)
+        } else {
+            reject::custom(DatabaseError)
+        }
+    })?;
 
     Ok(warp::reply::json(&SuccessResponse {
         message: "Deep cleaning task completed and moved to end of queue".to_string(),

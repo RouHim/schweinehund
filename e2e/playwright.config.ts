@@ -35,10 +35,6 @@ export default defineConfig({
   projects: [
     // Mobile devices
     {
-      name: 'iPhone 13',
-      use: { ...devices['iPhone 13'] },
-    },
-    {
       name: 'Pixel 5',
       use: { ...devices['Pixel 5'] },
     },
@@ -52,6 +48,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'cargo run',
+    cwd: '..',
     port: 3000,
     reuseExistingServer: !process.env.CI,
   },

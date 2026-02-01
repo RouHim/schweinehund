@@ -14,12 +14,12 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite:schweinehund.db".to_string());
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:schweinehund.db".to_string());
 
     tracing::info!("Initializing database at {}", database_url);
     let pool = db::init_pool(&database_url).await?;
-    
+
     tracing::info!("Running database migrations");
     db::run_migrations(&pool).await?;
 
@@ -34,8 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let addr: SocketAddr = "127.0.0.1:3000".parse()?;
     tracing::info!("Starting server on {}", addr);
 
-    let (_, server) = warp::serve(all_routes)
-        .bind_with_graceful_shutdown(addr, shutdown_signal());
+    let (_, server) = warp::serve(all_routes).bind_with_graceful_shutdown(addr, shutdown_signal());
 
     server.await;
     tracing::info!("Server shutdown gracefully");

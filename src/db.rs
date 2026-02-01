@@ -325,10 +325,7 @@ pub mod tests {
         complete_deep_task(&pool, first_task_id).await?;
 
         let tasks_after = get_deep_cleaning_queue(&pool).await?;
-        let completed_task = tasks_after
-            .iter()
-            .find(|t| t.id == first_task_id)
-            .unwrap();
+        let completed_task = tasks_after.iter().find(|t| t.id == first_task_id).unwrap();
 
         assert_eq!(completed_task.queue_position, 5);
         assert!(completed_task.completed_at.is_some());

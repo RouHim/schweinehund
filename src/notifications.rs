@@ -40,10 +40,7 @@ impl NtfyClient {
                     info!("Notification sent to schweinehund: {} - {}", title, message);
                     Ok(())
                 } else {
-                    error!(
-                        "Failed to send notification: HTTP {}",
-                        response.status()
-                    );
+                    error!("Failed to send notification: HTTP {}", response.status());
                     Ok(()) // Fire-and-forget: don't propagate
                 }
             }
@@ -55,6 +52,7 @@ impl NtfyClient {
     }
 
     /// Send daily reminder about tasks (with quiet hours check)
+    #[allow(dead_code)]
     pub async fn send_daily_reminder(&self, pool: &SqlitePool) -> Result<()> {
         // Check if notifications are enabled
         let settings = crate::db::get_app_settings(pool).await?;
@@ -66,7 +64,7 @@ impl NtfyClient {
         // Check current time - don't send between 10 PM and 7 AM (quiet hours)
         let now = chrono::Local::now();
         let hour = now.hour();
-        if hour >= 22 || hour < 7 {
+        if !(7..22).contains(&hour) {
             info!("Quiet hours (10 PM - 7 AM), skipping notification");
             return Ok(());
         }
@@ -105,6 +103,7 @@ pub async fn send_test_notification() -> Result<()> {
 }
 
 /// Send daily reminder (called by scheduler)
+#[allow(dead_code)]
 pub async fn send_daily_reminder(pool: &SqlitePool) -> Result<()> {
     let client = NtfyClient::new();
     client.send_daily_reminder(pool).await?;
