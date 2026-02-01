@@ -2,12 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#FF7F66">
+    <meta name="description" content="Daily habit tracker - defeat your inner Schweinehund">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Schweinehund</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <div id="app"></div>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="title-section">
+                    <div class="mascot">🐷</div>
+                    <h1>Schweinehund</h1>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Today's Tasks -->
+        <section id="today-section">
+            <h2>Today's Tasks</h2>
+            <div id="tasks-loading" class="loading">Loading tasks...</div>
+            <div id="tasks-error" class="error" style="display: none;"></div>
+            <ul id="tasks-list" class="task-list" style="display: none;"></ul>
+        </section>
+
+        <!-- Deep Cleaning Queue -->
+        <section id="deep-cleaning-section">
+            <h2>Deep Cleaning Queue</h2>
+            <div id="deep-cleaning-loading" class="loading">Loading deep cleaning tasks...</div>
+            <div id="deep-cleaning-error" class="error" style="display: none;"></div>
+            <ul id="deep-cleaning-list" class="task-list" style="display: none;"></ul>
+        </section>
+
+        <!-- Settings -->
+        <section id="settings-section">
+            <h2>Settings</h2>
+            <div id="settings-loading" class="loading">Loading settings...</div>
+            <div id="settings-error" class="error" style="display: none;"></div>
+            <form id="settings-form" style="display: none;">
+                <label>
+                    <input type="checkbox" id="notification-enabled" name="notification_enabled">
+                    Enable daily notifications
+                </label>
+                <label for="notification-time">
+                    Notification time
+                    <input type="time" id="notification-time" name="notification_time">
+                </label>
+                <button type="submit">Save Settings</button>
+            </form>
+        </section>
+    </main>
+
     <script src="/app.js"></script>
 </body>
 </html>

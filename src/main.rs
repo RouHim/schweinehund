@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let api = routes::api_routes(pool);
     let static_files = assets::serve_embedded();
 
-    let all_routes = api.or(static_files);
+    let all_routes = static_files.or(api).recover(routes::handle_rejection);
 
     let addr: SocketAddr = "127.0.0.1:3000".parse()?;
     tracing::info!("Starting server on {}", addr);

@@ -12,17 +12,21 @@ pub fn serve_embedded() -> impl Filter<Extract = impl warp::Reply, Error = warp:
 }
 
 async fn serve_static(path: warp::path::FullPath) -> Result<impl warp::Reply, warp::Rejection> {
-    let path = path.as_str();
+    let path_str = path.as_str();
+    tracing::debug!("serve_static called with path: {}", path_str);
     
-    if path.starts_with("/api") {
+    if path_str.starts_with("/api") {
+        tracing::debug!("Rejecting API path: {}", path_str);
         return Err(warp::reject::not_found());
     }
     
-    let path = if path == "/" { "index.html" } else { &path[1..] };
+    let file_path = if path_str == "/" { "index.html" } else { &path_str[1..] };
+    tracing::debug!("Looking for embedded file: {}", file_path);
 
-    match Assets::get(path) {
+    match Assets::get(file_path) {
         Some(content) => {
-            let mime_type = mime_guess::from_path(path)
+            tracing::debug!("Found embedded file: {}, size: {} bytes", file_path, content.data.len());
+            let mime_type = mime_guess::from_path(file_path)
                 .first_or_octet_stream()
                 .as_ref()
                 .to_string();
@@ -38,7 +42,9 @@ async fn serve_static(path: warp::path::FullPath) -> Result<impl warp::Reply, wa
             ))
         }
         None => {
-            if path != "index.html" {
+            tracing::debug!("File not found in embedded assets: {}", file_path);
+            if file_path != "index.html" {
+                tracing::debug!("Falling back to index.html");
                 match Assets::get("index.html") {
                     Some(content) => {
                         let mime_type = mime_guess::from_path("index.html")

@@ -55,7 +55,6 @@ pub fn api_routes(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error =
         .or(update_settings(pool.clone()))
         .or(debug_reset(pool.clone()))
         .or(debug_notify(pool))
-        .recover(handle_rejection)
         .with(cors)
 }
 
@@ -247,7 +246,7 @@ async fn handle_debug_notify(_pool: SqlitePool) -> Result<impl Reply, Rejection>
     }))
 }
 
-async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
+pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
     if err.is_not_found() {
         Ok(warp::reply::with_status(
             warp::reply::json(&ErrorResponse {
