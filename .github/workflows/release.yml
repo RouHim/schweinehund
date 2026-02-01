@@ -71,19 +71,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
-        if: steps.semantic.outputs.new_release == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: ./pocketbase
-          file: ./pocketbase/Dockerfile
-          push: true
-          tags: |
-            rouhim/schweinehund-pocketbase:latest
-            rouhim/schweinehund-pocketbase:v${{ steps.semantic.outputs.version }}
-            rouhim/schweinehund-pocketbase:${{ github.sha }}
-          cache-from: type=registry,ref=rouhim/schweinehund-pocketbase:latest
-          cache-to: type=inline
 
       - name: Create GitHub Release
         if: steps.semantic.outputs.new_release == 'true'

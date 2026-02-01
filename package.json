@@ -1,7 +1,7 @@
 {
   "name": "schweinehund",
   "version": "0.0.0-development",
-  "description": "A progressive web application for task management and notifications, built with PocketBase, HTMX, and Alpine.js",
+  "description": "A progressive web application for task management and notifications, built with Rust, HTMX, and Alpine.js",
   "private": true,
   "repository": {
     "type": "git",
