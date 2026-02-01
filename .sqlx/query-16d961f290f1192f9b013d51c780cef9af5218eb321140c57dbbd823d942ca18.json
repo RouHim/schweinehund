@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE deep_cleaning_tasks\n        SET completed_at = ?, queue_position = ?\n        WHERE id = ?\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "16d961f290f1192f9b013d51c780cef9af5218eb321140c57dbbd823d942ca18"
+}

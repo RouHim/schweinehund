@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE app_state\n        SET value = ?\n        WHERE key = 'last_reset_at'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "879d6bc1e05f7279b5d7bacd4c18a46895b09da9e99843f8e8f335d7fb25faec"
+}

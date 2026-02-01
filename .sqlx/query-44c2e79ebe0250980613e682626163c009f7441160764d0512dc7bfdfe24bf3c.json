@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT value\n        FROM app_state\n        WHERE key = 'last_reset_at'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "value",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "44c2e79ebe0250980613e682626163c009f7441160764d0512dc7bfdfe24bf3c"
+}

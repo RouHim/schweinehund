@@ -3,6 +3,7 @@ use tracing_subscriber::EnvFilter;
 use warp::Filter;
 
 mod assets;
+mod db;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

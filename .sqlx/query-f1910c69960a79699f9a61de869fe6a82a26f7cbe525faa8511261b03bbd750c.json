@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT value\n        FROM app_state\n        WHERE key = 'notification_time'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "value",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "f1910c69960a79699f9a61de869fe6a82a26f7cbe525faa8511261b03bbd750c"
+}
