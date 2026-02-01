@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use std::convert::Infallible;
 use warp::{http::StatusCode, reject, Filter, Rejection, Reply};
 
-use crate::db;
+use crate::{db, notifications};
 
 #[derive(Debug)]
 struct DatabaseError;
@@ -221,12 +221,7 @@ fn debug_reset(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Re
 }
 
 async fn handle_debug_reset(pool: SqlitePool) -> Result<impl Reply, Rejection> {
-    db::reset_daily_tasks(&pool)
-        .await
-        .map_err(|_| reject::custom(DatabaseError))?;
-
-    let now = chrono::Utc::now().timestamp();
-    db::set_last_reset(&pool, now)
+    crate::scheduler::trigger_reset_now(&pool)
         .await
         .map_err(|_| reject::custom(DatabaseError))?;
 
@@ -243,8 +238,12 @@ fn debug_notify(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = R
 }
 
 async fn handle_debug_notify(_pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    notifications::send_test_notification()
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
     Ok(warp::reply::json(&SuccessResponse {
-        message: "Test notification triggered (not implemented yet)".to_string(),
+        message: "Test notification sent to schweinehund".to_string(),
     }))
 }
 

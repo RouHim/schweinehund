@@ -4,7 +4,9 @@ use warp::Filter;
 
 mod assets;
 mod db;
+mod notifications;
 mod routes;
+mod scheduler;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -20,6 +22,9 @@ async fn main() -> anyhow::Result<()> {
     
     tracing::info!("Running database migrations");
     db::run_migrations(&pool).await?;
+
+    tracing::info!("Starting weekly reset scheduler");
+    let _scheduler_handle = scheduler::start_scheduler(pool.clone());
 
     let api = routes::api_routes(pool);
     let static_files = assets::serve_embedded();
