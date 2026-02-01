@@ -11,7 +11,7 @@ function app() {
     // Notification state
     notificationsEnabled: false,
     
-    // Task state (will be populated from PocketBase)
+     // Task state (populated from Rust backend API)
     tasks: [],
     zones: [],
     
