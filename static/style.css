@@ -467,3 +467,42 @@ dialog footer button.secondary:hover {
         grid-column: 1 / -1;
     }
 }
+
+/* Task Actions */
+.task-actions {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    padding: 0.4rem;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+}
+
+.icon-btn:hover {
+    color: var(--primary);
+    background-color: rgba(255, 127, 102, 0.1);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+.delete-btn:hover {
+    color: var(--error);
+    background-color: rgba(244, 67, 54, 0.1);
+}
