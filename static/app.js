@@ -1,5 +1,137 @@
 const API_BASE = '/api';
 
+function initModal() {
+    const modal = document.getElementById('task-modal');
+    const form = document.getElementById('task-form');
+    const closeBtn = document.querySelector('[data-close-modal]');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
+    if (form) {
+        form.addEventListener('submit', handleTaskSubmit);
+    }
+    
+    if (modal) {
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    }
+}
+
+function openModal(type, task = null) {
+    const modal = document.getElementById('task-modal');
+    const form = document.getElementById('task-form');
+    const title = document.getElementById('modal-title');
+    const typeInput = document.getElementById('task-type');
+    const idInput = document.getElementById('task-id');
+    const nameInput = document.getElementById('task-name');
+    const descInput = document.getElementById('task-description');
+    const zoneInput = document.getElementById('task-zone');
+    const dayField = document.getElementById('day-of-week-field');
+    const dayInput = document.getElementById('task-day-of-week');
+    
+    if (!modal || !form) return;
+    
+    form.reset();
+    typeInput.value = type;
+    
+    if (type === 'daily') {
+        dayField.style.display = 'block';
+        dayInput.required = true;
+    } else {
+        dayField.style.display = 'none';
+        dayInput.required = false;
+    }
+    
+    if (task) {
+        title.textContent = 'Edit Task';
+        idInput.value = task.id;
+        nameInput.value = task.name;
+        descInput.value = task.description || '';
+        zoneInput.value = task.zone || '';
+        if (type === 'daily') {
+            dayInput.value = task.day_of_week;
+        }
+    } else {
+        title.textContent = 'Add Task';
+        idInput.value = '';
+        if (type === 'daily') {
+            const today = new Date().getDay();
+            const apiDay = today === 0 ? 7 : today;
+            dayInput.value = apiDay;
+        }
+    }
+    
+    modal.showModal();
+}
+
+window.openModal = openModal;
+
+function closeModal() {
+    const modal = document.getElementById('task-modal');
+    if (modal) {
+        modal.close();
+        document.getElementById('task-form').reset();
+    }
+}
+
+async function handleTaskSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const type = formData.get('task-type');
+    const id = formData.get('task-id');
+    const isEdit = !!id;
+    
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        zone: formData.get('zone')
+    };
+    
+    if (type === 'daily') {
+        data.day_of_week = parseInt(formData.get('day_of_week'));
+    }
+    
+    const endpoint = type === 'daily' ? 'tasks' : 'deep-cleaning';
+    const url = isEdit 
+        ? `${API_BASE}/${endpoint}/${id}`
+        : `${API_BASE}/${endpoint}`;
+        
+    const method = isEdit ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to save task: ${response.statusText}`);
+        }
+        
+        closeModal();
+        
+        if (type === 'daily') {
+            fetchTodayTasks();
+        } else {
+            fetchDeepCleaning();
+        }
+        
+    } catch (error) {
+        console.error('Error saving task:', error);
+        alert(`Failed to save task: ${error.message}`);
+    }
+}
+
 const state = {
     tasks: [],
     deepCleaning: [],
@@ -54,6 +186,42 @@ async function fetchTodayTasks() {
     }
 }
 
+const EDIT_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <path d="M12.146 0.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10z"/>
+</svg>`;
+
+const DELETE_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+  <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1z"/>
+</svg>`;
+
+async function deleteTask(type, id) {
+    if (!confirm('Are you sure you want to delete this task?')) {
+        return;
+    }
+
+    const endpoint = type === 'daily' ? `tasks/${id}` : `deep-cleaning/${id}`;
+    
+    try {
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete task: ${response.statusText}`);
+        }
+
+        if (type === 'daily') {
+            await fetchTodayTasks();
+        } else {
+            await fetchDeepCleaning();
+        }
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        alert(`Failed to delete task: ${error.message}`);
+    }
+}
+
 function renderTasks(tasks) {
     const listEl = document.getElementById('tasks-list');
     
@@ -84,17 +252,44 @@ function renderTasks(tasks) {
                         </div>
                     </div>
                 </label>
+                <div class="task-actions">
+                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Edit task">
+                        ${EDIT_ICON}
+                    </button>
+                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Delete task">
+                        ${DELETE_ICON}
+                    </button>
+                </div>
             </li>
         `;
     }).join('');
     
-    attachTaskCheckboxListeners();
+    attachTaskListeners();
 }
 
-function attachTaskCheckboxListeners() {
-    const checkboxes = document.querySelectorAll('.task-checkbox');
+function attachTaskListeners() {
+    const listEl = document.getElementById('tasks-list');
+    const checkboxes = listEl.querySelectorAll('.task-checkbox');
+    
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', handleTaskToggle);
+    });
+
+    listEl.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering checkbox
+            const id = parseInt(btn.dataset.taskId);
+            const task = state.tasks.find(t => t.id === id);
+            if (task) window.openModal('daily', task);
+        });
+    });
+
+    listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering checkbox
+            const id = parseInt(btn.dataset.taskId);
+            deleteTask('daily', id);
+        });
     });
 }
 
@@ -199,17 +394,44 @@ function renderDeepCleaning(tasks) {
                         </div>
                     </div>
                 </label>
+                <div class="task-actions">
+                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Edit task">
+                        ${EDIT_ICON}
+                    </button>
+                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Delete task">
+                        ${DELETE_ICON}
+                    </button>
+                </div>
             </li>
         `;
     }).join('');
     
-    attachDeepCleaningCheckboxListeners();
+    attachDeepCleaningListeners();
 }
 
-function attachDeepCleaningCheckboxListeners() {
-    const checkboxes = document.querySelectorAll('[data-deep-cleaning-id]');
+function attachDeepCleaningListeners() {
+    const listEl = document.getElementById('deep-cleaning-list');
+    const checkboxes = listEl.querySelectorAll('.task-checkbox');
+    
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', handleDeepCleaningToggle);
+    });
+
+    listEl.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            const task = state.deepCleaning.find(t => t.id === id);
+            if (task) window.openModal('deep-cleaning', task);
+        });
+    });
+
+    listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            deleteTask('deep-cleaning', id);
+        });
     });
 }
 
@@ -330,6 +552,7 @@ function getDayName(dayNumber) {
 
 function init() {
     initTheme();
+    initModal();
     
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {

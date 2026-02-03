@@ -65,6 +65,52 @@
         </section>
     </main>
 
+    <dialog id="task-modal">
+        <article>
+            <header>
+                <h3 id="modal-title">Add Task</h3>
+            </header>
+            <form id="task-form">
+                <input type="hidden" name="task-type" id="task-type">
+                <input type="hidden" name="task-id" id="task-id">
+                
+                <label>
+                    Name
+                    <input type="text" name="name" id="task-name" required maxlength="255" data-testid="task-name-input">
+                </label>
+                
+                <label>
+                    Description
+                    <textarea name="description" id="task-description" maxlength="1000" data-testid="task-desc-input"></textarea>
+                </label>
+                
+                <label>
+                    Zone
+                    <input type="text" name="zone" id="task-zone" maxlength="100" placeholder="e.g., Kitchen" data-testid="task-zone-input">
+                </label>
+                
+                <label id="day-of-week-field">
+                    Day of Week
+                    <select name="day_of_week" id="task-day-of-week" data-testid="task-day-select">
+                        <option value="-1">Every day</option>
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                        <option value="7">Sunday</option>
+                    </select>
+                </label>
+                
+                <footer>
+                    <button type="button" class="secondary" data-close-modal data-testid="modal-cancel-btn">Cancel</button>
+                    <button type="submit" data-testid="modal-save-btn">Save</button>
+                </footer>
+            </form>
+        </article>
+    </dialog>
+
     <script src="/app.js"></script>
 </body>
 </html>
