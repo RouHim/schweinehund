@@ -32,7 +32,10 @@
     <main class="container">
         <!-- Today's Tasks -->
         <section id="today-section">
-            <h2>Today's Tasks</h2>
+            <div class="section-header">
+                <h2>Today's Tasks</h2>
+                <button id="add-daily-task-btn" class="add-btn" data-testid="add-daily-task-btn" aria-label="Add daily task">+ Add</button>
+            </div>
             <div id="tasks-loading" class="loading">Loading tasks...</div>
             <div id="tasks-error" class="error" style="display: none;"></div>
             <ul id="tasks-list" class="task-list" style="display: none;"></ul>
@@ -40,7 +43,10 @@
 
         <!-- Deep Cleaning Queue -->
         <section id="deep-cleaning-section">
-            <h2>Deep Cleaning Queue</h2>
+            <div class="section-header">
+                <h2>Deep Cleaning Queue</h2>
+                <button id="add-deep-cleaning-btn" class="add-btn" data-testid="add-deep-cleaning-btn" aria-label="Add deep cleaning task">+ Add</button>
+            </div>
             <div id="deep-cleaning-loading" class="loading">Loading deep cleaning tasks...</div>
             <div id="deep-cleaning-error" class="error" style="display: none;"></div>
             <ul id="deep-cleaning-list" class="task-list" style="display: none;"></ul>

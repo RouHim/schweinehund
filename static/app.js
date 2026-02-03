@@ -20,6 +20,20 @@ function initModal() {
             }
         });
     }
+    
+    const addDailyBtn = document.getElementById('add-daily-task-btn');
+    if (addDailyBtn) {
+        addDailyBtn.addEventListener('click', () => {
+            openModal('daily');
+        });
+    }
+    
+    const addDeepCleaningBtn = document.getElementById('add-deep-cleaning-btn');
+    if (addDeepCleaningBtn) {
+        addDeepCleaningBtn.addEventListener('click', () => {
+            openModal('deep-cleaning');
+        });
+    }
 }
 
 function openModal(type, task = null) {
