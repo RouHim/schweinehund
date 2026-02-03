@@ -51,5 +51,8 @@ export default defineConfig({
     cwd: '..',
     port: 3000,
     reuseExistingServer: !process.env.CI,
+    env: {
+      DATABASE_URL: 'sqlite:data/schweinehund.db',
+    },
   },
 });
