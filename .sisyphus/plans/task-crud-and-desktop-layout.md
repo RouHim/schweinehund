@@ -91,14 +91,14 @@ Enable users to create, edit, and delete tasks directly in the UI, and improve t
    - `e2e/tests/desktop-layout.spec.ts` - Layout verification
 
 ### Definition of Done
-- [ ] All CRUD operations work for both task types
-- [ ] Modal opens/closes correctly, form validates
-- [ ] Drag-drop reordering persists after reload
-- [ ] Up/down buttons work on narrow viewports
-- [ ] Two-column layout visible at ≥1024px
-- [ ] Mobile layout unchanged at <768px
-- [ ] All E2E tests pass: `cd e2e && npx playwright test`
-- [ ] `cargo build` succeeds with no warnings
+- [x] All CRUD operations work for both task types
+- [x] Modal opens/closes correctly, form validates
+- [x] Drag-drop reordering persists after reload
+- [x] Up/down buttons work on narrow viewports
+- [x] Two-column layout visible at ≥1024px
+- [x] Mobile layout unchanged at <768px
+- [x] All E2E tests pass: `cd e2e && npx playwright test`
+- [x] `cargo build` succeeds with no warnings
 
 ### Must Have
 - Full CRUD for Daily Tasks and Deep Cleaning
@@ -996,17 +996,17 @@ curl -X POST http://localhost:3000/api/tasks \
 ```
 
 ### Final Checklist
-- [ ] Can create daily task via modal
-- [ ] Can edit daily task via modal
-- [ ] Can delete daily task with confirmation
-- [ ] Can create deep cleaning task via modal
-- [ ] Can edit deep cleaning task via modal
-- [ ] Can delete deep cleaning task
-- [ ] Can reorder deep cleaning via drag-drop (desktop)
-- [ ] Can reorder deep cleaning via up/down buttons (mobile)
-- [ ] Two-column layout at ≥1024px viewport
-- [ ] Single-column layout at <768px viewport
-- [ ] All E2E tests pass
-- [ ] Existing toggle behavior unchanged
-- [ ] No JS framework added
-- [ ] No npm dependencies added
+- [x] Can create daily task via modal
+- [x] Can edit daily task via modal
+- [x] Can delete daily task with confirmation
+- [x] Can create deep cleaning task via modal
+- [x] Can edit deep cleaning task via modal
+- [x] Can delete deep cleaning task
+- [x] Can reorder deep cleaning via drag-drop (desktop)
+- [x] Can reorder deep cleaning via up/down buttons (mobile)
+- [x] Two-column layout at ≥1024px viewport
+- [x] Single-column layout at <768px viewport
+- [x] All E2E tests pass
+- [x] Existing toggle behavior unchanged
+- [x] No JS framework added
+- [x] No npm dependencies added
