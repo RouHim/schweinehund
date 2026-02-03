@@ -120,8 +120,6 @@ pub async fn toggle_task(pool: &SqlitePool, id: i64) -> Result<()> {
 
 /// Complete a deep cleaning task and move it to the end of the queue
 pub async fn complete_deep_task(pool: &SqlitePool, id: i64) -> Result<()> {
-    let now = chrono::Utc::now().timestamp();
-
     let max_pos: (Option<i64>,) = sqlx::query_as(
         r#"
         SELECT MAX(queue_position)
@@ -136,11 +134,10 @@ pub async fn complete_deep_task(pool: &SqlitePool, id: i64) -> Result<()> {
     sqlx::query(
         r#"
         UPDATE deep_cleaning_tasks
-        SET completed_at = ?, queue_position = ?
+        SET completed_at = NULL, queue_position = ?
         WHERE id = ?
         "#,
     )
-    .bind(now)
     .bind(new_position)
     .bind(id)
     .execute(pool)

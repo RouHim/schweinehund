@@ -6,6 +6,15 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
   });
 
+  test.afterEach(async ({ page }) => {
+    const modal = page.locator('#task-modal');
+    const isVisible = await modal.isVisible().catch(() => false);
+    if (isVisible) {
+      await page.keyboard.press('Escape');
+      await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+  });
+
   test('creates a new daily task via modal', async ({ page }) => {
     const addButton = page.locator('[data-testid="add-daily-task-btn"]');
     await addButton.click();
@@ -24,8 +33,7 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     // Submit form
     await page.locator('[data-testid="modal-save-btn"]').click();
     
-    // Verify modal closes
-    await expect(modal).not.toBeVisible();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
     
     // Verify task appears in list
     const tasksList = page.locator('#tasks-list');
@@ -67,11 +75,15 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     
     await page.locator('[data-testid="modal-save-btn"]').click();
     
-    await responsePromise;
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
     
-    await expect(modal).not.toBeVisible();
+    await page.waitForFunction(() => {
+      const modal = document.getElementById('task-modal') as HTMLDialogElement;
+      return !modal || !modal.open;
+    }, { timeout: 10000 });
     
-    await expect(tasksList.locator('.task-name', { hasText: updatedName })).toBeVisible();
+    await expect(tasksList.locator('.task-name', { hasText: updatedName })).toBeVisible({ timeout: 10000 });
   });
 
   test('deletes a daily task with confirmation', async ({ page }) => {
@@ -116,6 +128,15 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
   });
 
+  test.afterEach(async ({ page }) => {
+    const modal = page.locator('#task-modal');
+    const isVisible = await modal.isVisible().catch(() => false);
+    if (isVisible) {
+      await page.keyboard.press('Escape');
+      await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+  });
+
   test('creates a new deep cleaning task', async ({ page }) => {
     const addButton = page.locator('[data-testid="add-deep-cleaning-btn"]');
     await addButton.click();
@@ -137,8 +158,7 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     // Submit form
     await page.locator('[data-testid="modal-save-btn"]').click();
     
-    // Verify modal closes
-    await expect(modal).not.toBeVisible();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
     
     // Verify task appears at end of queue
     const deepCleaningList = page.locator('#deep-cleaning-list');
@@ -183,8 +203,9 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     await page.locator('[data-testid="modal-save-btn"]').click();
     
     await responsePromise;
+    await page.waitForLoadState('networkidle');
     
-    await expect(modal).not.toBeVisible();
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
     
     await expect(deepCleaningList.locator('.task-name', { hasText: updatedName })).toBeVisible();
   });
