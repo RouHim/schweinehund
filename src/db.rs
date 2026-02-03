@@ -34,11 +34,12 @@ pub struct DailyTask {
     pub completed_at: Option<i64>,
 }
 
-#[derive(Debug, Clone, FromRow, serde::Serialize)]
+#[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize)]
 pub struct DeepCleaningTask {
     pub id: i64,
     pub name: String,
     pub description: Option<String>,
+    pub zone: Option<String>,
     pub queue_position: i64,
     pub completed_at: Option<i64>,
 }
@@ -70,7 +71,7 @@ pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<
 pub async fn get_deep_cleaning_queue(pool: &SqlitePool) -> Result<Vec<DeepCleaningTask>> {
     let tasks = sqlx::query_as::<_, DeepCleaningTask>(
         r#"
-        SELECT id, name, description, queue_position, completed_at
+        SELECT id, name, description, zone, queue_position, completed_at
         FROM deep_cleaning_tasks
         ORDER BY queue_position
         "#,
@@ -255,6 +256,241 @@ pub async fn update_app_settings(pool: &SqlitePool, settings: &AppSettings) -> R
     .await?;
 
     Ok(())
+}
+
+/// Create a new daily task
+pub async fn create_daily_task(
+    pool: &SqlitePool,
+    name: &str,
+    description: Option<&str>,
+    zone: Option<&str>,
+    day_of_week: i64,
+) -> Result<DailyTask> {
+    let result = sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at)
+        VALUES (?, ?, ?, ?, 0, NULL)
+        "#,
+    )
+    .bind(name)
+    .bind(description)
+    .bind(zone)
+    .bind(day_of_week)
+    .execute(pool)
+    .await?;
+
+    let task = sqlx::query_as::<_, DailyTask>(
+        r#"
+        SELECT id, name, description, zone, day_of_week, completed, completed_at
+        FROM daily_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(result.last_insert_rowid())
+    .fetch_one(pool)
+    .await?;
+
+    Ok(task)
+}
+
+/// Update an existing daily task
+pub async fn update_daily_task(
+    pool: &SqlitePool,
+    id: i64,
+    name: &str,
+    description: Option<&str>,
+    zone: Option<&str>,
+    day_of_week: i64,
+) -> Result<DailyTask> {
+    sqlx::query(
+        r#"
+        UPDATE daily_tasks
+        SET name = ?, description = ?, zone = ?, day_of_week = ?
+        WHERE id = ?
+        "#,
+    )
+    .bind(name)
+    .bind(description)
+    .bind(zone)
+    .bind(day_of_week)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    let task = sqlx::query_as::<_, DailyTask>(
+        r#"
+        SELECT id, name, description, zone, day_of_week, completed, completed_at
+        FROM daily_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(task)
+}
+
+/// Delete a daily task
+pub async fn delete_daily_task(pool: &SqlitePool, id: i64) -> Result<()> {
+    let result = sqlx::query(
+        r#"
+        DELETE FROM daily_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    if result.rows_affected() == 0 {
+        anyhow::bail!("no rows affected");
+    }
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub async fn create_deep_cleaning_task(
+    pool: &SqlitePool,
+    name: &str,
+    description: Option<&str>,
+    zone: Option<&str>,
+) -> Result<DeepCleaningTask> {
+    let max_pos: (Option<i64>,) = sqlx::query_as(
+        r#"
+        SELECT MAX(queue_position)
+        FROM deep_cleaning_tasks
+        "#,
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let new_position = max_pos.0.unwrap_or(0) + 1;
+
+    let result = sqlx::query(
+        r#"
+        INSERT INTO deep_cleaning_tasks (name, description, zone, queue_position, completed_at)
+        VALUES (?, ?, ?, ?, NULL)
+        "#,
+    )
+    .bind(name)
+    .bind(description)
+    .bind(zone)
+    .bind(new_position)
+    .execute(pool)
+    .await?;
+
+    let task = sqlx::query_as::<_, DeepCleaningTask>(
+        r#"
+        SELECT id, name, description, zone, queue_position, completed_at
+        FROM deep_cleaning_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(result.last_insert_rowid())
+    .fetch_one(pool)
+    .await?;
+
+    Ok(task)
+}
+
+#[allow(dead_code)]
+pub async fn update_deep_cleaning_task(
+    pool: &SqlitePool,
+    id: i64,
+    name: &str,
+    description: Option<&str>,
+    zone: Option<&str>,
+) -> Result<DeepCleaningTask> {
+    sqlx::query(
+        r#"
+        UPDATE deep_cleaning_tasks
+        SET name = ?, description = ?, zone = ?
+        WHERE id = ?
+        "#,
+    )
+    .bind(name)
+    .bind(description)
+    .bind(zone)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    let task = sqlx::query_as::<_, DeepCleaningTask>(
+        r#"
+        SELECT id, name, description, zone, queue_position, completed_at
+        FROM deep_cleaning_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(task)
+}
+
+#[allow(dead_code)]
+pub async fn delete_deep_cleaning_task(pool: &SqlitePool, id: i64) -> Result<()> {
+    let deleted_task: (i64,) = sqlx::query_as(
+        r#"
+        SELECT queue_position
+        FROM deep_cleaning_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
+
+    let deleted_position = deleted_task.0;
+
+    let result = sqlx::query(
+        r#"
+        DELETE FROM deep_cleaning_tasks
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    if result.rows_affected() == 0 {
+        anyhow::bail!("no rows affected");
+    }
+
+    sqlx::query(
+        r#"
+        UPDATE deep_cleaning_tasks
+        SET queue_position = queue_position - 1
+        WHERE queue_position > ?
+        "#,
+    )
+    .bind(deleted_position)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub async fn reorder_deep_cleaning_queue(pool: &SqlitePool, order: &[i64]) -> Result<Vec<DeepCleaningTask>> {
+    for (index, task_id) in order.iter().enumerate() {
+        sqlx::query(
+            r#"
+            UPDATE deep_cleaning_tasks
+            SET queue_position = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind((index + 1) as i64)
+        .bind(task_id)
+        .execute(pool)
+        .await?;
+    }
+
+    get_deep_cleaning_queue(pool).await
 }
 
 #[cfg(test)]

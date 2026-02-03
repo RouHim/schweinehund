@@ -36,6 +36,41 @@ struct SettingsResponse {
     notification_time: String,
 }
 
+#[derive(Deserialize)]
+struct CreateTaskRequest {
+    name: String,
+    description: Option<String>,
+    zone: Option<String>,
+    day_of_week: i64,
+}
+
+#[derive(Deserialize)]
+struct UpdateTaskRequest {
+    name: String,
+    description: Option<String>,
+    zone: Option<String>,
+    day_of_week: i64,
+}
+
+#[derive(Deserialize)]
+struct CreateDeepCleaningRequest {
+    name: String,
+    description: Option<String>,
+    zone: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct UpdateDeepCleaningRequest {
+    name: String,
+    description: Option<String>,
+    zone: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ReorderRequest {
+    order: Vec<i64>,
+}
+
 fn with_db(pool: SqlitePool) -> impl Filter<Extract = (SqlitePool,), Error = Infallible> + Clone {
     warp::any().map(move || pool.clone())
 }
@@ -45,7 +80,7 @@ pub fn api_routes(
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let cors = warp::cors()
         .allow_any_origin()
-        .allow_methods(vec!["GET", "POST", "OPTIONS"])
+        .allow_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
         .allow_headers(vec!["Content-Type"]);
 
     health()
@@ -53,8 +88,15 @@ pub fn api_routes(
         .or(toggle_task(pool.clone()))
         .or(get_deep_cleaning(pool.clone()))
         .or(complete_deep_task(pool.clone()))
+        .or(create_deep_cleaning(pool.clone()))
+        .or(update_deep_cleaning(pool.clone()))
+        .or(delete_deep_cleaning(pool.clone()))
+        .or(reorder_deep_cleaning(pool.clone()))
         .or(get_settings(pool.clone()))
         .or(update_settings(pool.clone()))
+        .or(create_task(pool.clone()))
+        .or(update_task(pool.clone()))
+        .or(delete_task(pool.clone()))
         .or(debug_reset(pool.clone()))
         .or(debug_notify(pool))
         .with(cors)
@@ -165,6 +207,132 @@ async fn handle_complete_deep_task(id: i64, pool: SqlitePool) -> Result<impl Rep
     }))
 }
 
+#[allow(dead_code)]
+fn create_deep_cleaning(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "deep-cleaning")
+        .and(warp::post())
+        .and(warp::body::json())
+        .and(with_db(pool))
+        .and_then(handle_create_deep_cleaning)
+}
+
+#[allow(dead_code)]
+async fn handle_create_deep_cleaning(
+    req: CreateDeepCleaningRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    if req.name.is_empty() || req.name.len() > 255 {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    let task = db::create_deep_cleaning_task(
+        &pool,
+        &req.name,
+        req.description.as_deref(),
+        req.zone.as_deref(),
+    )
+    .await
+    .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&task),
+        StatusCode::CREATED,
+    ))
+}
+
+#[allow(dead_code)]
+fn update_deep_cleaning(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "deep-cleaning" / i64)
+        .and(warp::put())
+        .and(warp::body::json())
+        .and(with_db(pool))
+        .and_then(handle_update_deep_cleaning)
+}
+
+#[allow(dead_code)]
+async fn handle_update_deep_cleaning(
+    id: i64,
+    req: UpdateDeepCleaningRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    if req.name.is_empty() || req.name.len() > 255 {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    let task = db::update_deep_cleaning_task(
+        &pool,
+        id,
+        &req.name,
+        req.description.as_deref(),
+        req.zone.as_deref(),
+    )
+    .await
+    .map_err(|e| {
+        if e.to_string().contains("no rows") {
+            reject::custom(NotFoundError)
+        } else {
+            reject::custom(DatabaseError)
+        }
+    })?;
+
+    Ok(warp::reply::json(&task))
+}
+
+#[allow(dead_code)]
+fn delete_deep_cleaning(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "deep-cleaning" / i64)
+        .and(warp::delete())
+        .and(with_db(pool))
+        .and_then(handle_delete_deep_cleaning)
+}
+
+#[allow(dead_code)]
+async fn handle_delete_deep_cleaning(id: i64, pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    db::delete_deep_cleaning_task(&pool, id).await.map_err(|e| {
+        if e.to_string().contains("no rows") {
+            reject::custom(NotFoundError)
+        } else {
+            reject::custom(DatabaseError)
+        }
+    })?;
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&SuccessResponse {
+            message: "Deep cleaning task deleted successfully".to_string(),
+        }),
+        StatusCode::NO_CONTENT,
+    ))
+}
+
+#[allow(dead_code)]
+fn reorder_deep_cleaning(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "deep-cleaning" / "reorder")
+        .and(warp::post())
+        .and(warp::body::json())
+        .and(with_db(pool))
+        .and_then(handle_reorder_deep_cleaning)
+}
+
+#[allow(dead_code)]
+async fn handle_reorder_deep_cleaning(
+    req: ReorderRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    let tasks = db::reorder_deep_cleaning_queue(&pool, &req.order)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&tasks))
+}
+
 fn get_settings(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::path!("api" / "settings")
         .and(warp::get())
@@ -210,6 +378,107 @@ async fn handle_update_settings(
         notification_enabled: settings.notification_enabled,
         notification_time: settings.notification_time,
     }))
+}
+
+fn create_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "tasks")
+        .and(warp::post())
+        .and(warp::body::json())
+        .and(with_db(pool))
+        .and_then(handle_create_task)
+}
+
+async fn handle_create_task(
+    req: CreateTaskRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    if req.name.is_empty() || req.name.len() > 255 {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    if req.day_of_week != -1 && (req.day_of_week < 1 || req.day_of_week > 7) {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    let task = db::create_daily_task(
+        &pool,
+        &req.name,
+        req.description.as_deref(),
+        req.zone.as_deref(),
+        req.day_of_week,
+    )
+    .await
+    .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&task),
+        StatusCode::CREATED,
+    ))
+}
+
+fn update_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "tasks" / i64)
+        .and(warp::put())
+        .and(warp::body::json())
+        .and(with_db(pool))
+        .and_then(handle_update_task)
+}
+
+async fn handle_update_task(
+    id: i64,
+    req: UpdateTaskRequest,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    if req.name.is_empty() || req.name.len() > 255 {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    if req.day_of_week != -1 && (req.day_of_week < 1 || req.day_of_week > 7) {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    let task = db::update_daily_task(
+        &pool,
+        id,
+        &req.name,
+        req.description.as_deref(),
+        req.zone.as_deref(),
+        req.day_of_week,
+    )
+    .await
+    .map_err(|e| {
+        if e.to_string().contains("no rows") {
+            reject::custom(NotFoundError)
+        } else {
+            reject::custom(DatabaseError)
+        }
+    })?;
+
+    Ok(warp::reply::json(&task))
+}
+
+fn delete_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "tasks" / i64)
+        .and(warp::delete())
+        .and(with_db(pool))
+        .and_then(handle_delete_task)
+}
+
+async fn handle_delete_task(id: i64, pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    db::delete_daily_task(&pool, id).await.map_err(|e| {
+        if e.to_string().contains("no rows") {
+            reject::custom(NotFoundError)
+        } else {
+            reject::custom(DatabaseError)
+        }
+    })?;
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&SuccessResponse {
+            message: "Task deleted successfully".to_string(),
+        }),
+        StatusCode::NO_CONTENT,
+    ))
 }
 
 fn debug_reset(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
