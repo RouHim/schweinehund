@@ -24,18 +24,22 @@ test.describe('Deep Cleaning Queue', () => {
     const deepCleaningItems = deepCleaningList.locator('.task-item');
     
     const firstTaskName = await deepCleaningItems.first().locator('.task-name').textContent();
-    const secondTaskName = await deepCleaningItems.nth(1).locator('.task-name').textContent();
+    const initialSecondTaskName = await deepCleaningItems.nth(1).locator('.task-name').textContent();
     
     expect(firstTaskName).toBeTruthy();
-    expect(secondTaskName).toBeTruthy();
-    expect(firstTaskName).not.toBe(secondTaskName);
+    expect(initialSecondTaskName).toBeTruthy();
+    expect(firstTaskName).not.toBe(initialSecondTaskName);
     
     const firstCheckbox = deepCleaningItems.first().locator('.task-checkbox');
     await firstCheckbox.click();
-    await page.waitForTimeout(500);
     
-    const newFirstTaskName = await deepCleaningItems.first().locator('.task-name').textContent();
-    expect(newFirstTaskName).toBe(secondTaskName);
+    // Wait for the list to update after completion
+    await page.waitForSelector('#deep-cleaning-list .task-item', { state: 'attached' });
+    await page.waitForTimeout(300);
+    
+    const updatedItems = page.locator('#deep-cleaning-list .task-item');
+    const newFirstTaskName = await updatedItems.first().locator('.task-name').textContent();
+    expect(newFirstTaskName).toBe(initialSecondTaskName);
   });
 
   test('completed task moves to end of queue', async ({ page }) => {
@@ -47,32 +51,36 @@ test.describe('Deep Cleaning Queue', () => {
     
     const firstCheckbox = deepCleaningItems.first().locator('.task-checkbox');
     await firstCheckbox.click();
-    await page.waitForTimeout(500);
     
-    const newCount = await deepCleaningItems.count();
-    expect(newCount).toBe(initialCount);
+    // Wait for the list to update after completion
+    await page.waitForSelector('#deep-cleaning-list .task-item', { state: 'attached' });
+    await page.waitForTimeout(300);
     
-    const lastTaskName = await deepCleaningItems.nth(initialCount - 1).locator('.task-name').textContent();
+    const updatedItems = page.locator('#deep-cleaning-list .task-item');
+    const finalCount = await updatedItems.count();
+    expect(finalCount).toBe(initialCount);
+    
+    const tasks = await updatedItems.all();
+    const lastTaskName = await tasks[tasks.length - 1].locator('.task-name').textContent();
     expect(lastTaskName).toBe(firstTaskName);
   });
 
-  test('queue persists after page reload', async ({ page }) => {
+  test('queue state persists after page reload', async ({ page }) => {
     const deepCleaningList = page.locator('#deep-cleaning-list');
     const deepCleaningItems = deepCleaningList.locator('.task-item');
     
-    const firstTaskName = await deepCleaningItems.first().locator('.task-name').textContent();
-    
-    const firstCheckbox = deepCleaningItems.first().locator('.task-checkbox');
-    await firstCheckbox.click();
-    await page.waitForTimeout(500);
+    const beforeReloadState = await deepCleaningItems.all().then(async items => {
+      return Promise.all(items.map(item => item.locator('.task-name').textContent()));
+    });
     
     await page.reload();
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
     
-    const reloadedList = page.locator('#deep-cleaning-list');
-    const reloadedItems = reloadedList.locator('.task-item');
-    const reloadedFirstTaskName = await reloadedItems.first().locator('.task-name').textContent();
+    const reloadedItems = page.locator('#deep-cleaning-list .task-item');
+    const afterReloadState = await reloadedItems.all().then(async items => {
+      return Promise.all(items.map(item => item.locator('.task-name').textContent()));
+    });
     
-    expect(reloadedFirstTaskName).not.toBe(firstTaskName);
+    expect(afterReloadState).toEqual(beforeReloadState);
   });
 });
