@@ -609,43 +609,66 @@ function updateProgress(done, total) {
     }
 }
 
-async function fetchJoke() {
-    const response = await fetch('https://v2.jokeapi.dev/joke/Any?lang=de&safe-mode&type=single');
-    if (!response.ok) {
-        throw new Error(`Failed to fetch joke: ${response.statusText}`);
+async function fetchJokeWithTimeout(timeoutMs) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+        const response = await fetch(
+            'https://v2.jokeapi.dev/joke/Any?lang=de&safe-mode&type=single',
+            { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch joke: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            throw new Error(data.message || 'No joke found');
+        }
+        return data.joke;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
     }
-    const data = await response.json();
-    if (data.error) {
-        throw new Error(data.message || 'No joke found');
-    }
-    return data.joke;
 }
 
-async function showFunFact() {
-    try {
-        const joke = await fetchJoke();
-        const modal = document.getElementById('fun-fact-modal');
-        const jokeText = document.getElementById('fun-fact-text');
-        
-        if (!modal || !jokeText) {
-            console.error('Fun fact modal elements not found');
-            return;
-        }
-        
-        jokeText.textContent = joke;
-        modal.showModal();
-        
-        const autoCloseTimeout = setTimeout(() => {
-            modal.close();
-        }, 15000);
-        
-        modal.addEventListener('close', () => {
-            clearTimeout(autoCloseTimeout);
-        }, { once: true });
-        
-    } catch (error) {
-        console.error('Failed to fetch fun fact:', error);
+function showFunFact() {
+    const modal = document.getElementById('fun-fact-modal');
+    const jokeText = document.getElementById('fun-fact-text');
+    
+    if (!modal || !jokeText) {
+        console.error('Fun fact modal elements not found');
+        return;
     }
+    
+    // Show modal immediately with loading state
+    jokeText.textContent = 'Lade Witz...';
+    modal.showModal();
+    
+    // Set up auto-close timeout
+    const autoCloseTimeout = setTimeout(() => {
+        modal.close();
+    }, 15000);
+    
+    modal.addEventListener('close', () => {
+        clearTimeout(autoCloseTimeout);
+    }, { once: true });
+    
+    // Fetch joke in background (non-blocking)
+    fetchJokeWithTimeout(5000)
+        .then(joke => {
+            if (modal.open) {
+                jokeText.textContent = joke;
+            }
+        })
+        .catch(error => {
+            console.error('Failed to fetch joke:', error);
+            if (modal.open) {
+                jokeText.textContent = 'Gut gemacht! 🎉';
+            }
+        });
 }
 
 function closeFunFactModal() {

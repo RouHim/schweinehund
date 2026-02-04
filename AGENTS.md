@@ -227,3 +227,6 @@ RUST_LOG=info                              # Logging level
 * Never use #dead_code lints, remove unused code instead
 * Humor is encouraged in comments, commit messages, human interactions, etc., but not in code structure
   or naming to avoid confusion.
+* You are not allowed to use sudo or root privileges on the system. Always work within the confines of your user
+  permissions. If you need
+  elevated permissions for a task, please request assistance from a human operator.

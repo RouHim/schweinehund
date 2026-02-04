@@ -16,12 +16,13 @@ fn get_next_midnight(now: chrono::DateTime<Local>) -> chrono::DateTime<Local> {
     }
 
     // Otherwise return tomorrow's midnight
-    Local.from_local_datetime(
-        &(now.date_naive() + chrono::Duration::days(1))
-            .and_hms_opt(0, 0, 0)
-            .unwrap(),
-    )
-    .unwrap()
+    Local
+        .from_local_datetime(
+            &(now.date_naive() + chrono::Duration::days(1))
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .unwrap()
 }
 
 /// Execute a reset: uncheck all daily tasks and update last_reset_at

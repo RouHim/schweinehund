@@ -294,13 +294,15 @@ fn delete_deep_cleaning(
 
 #[allow(dead_code)]
 async fn handle_delete_deep_cleaning(id: i64, pool: SqlitePool) -> Result<impl Reply, Rejection> {
-    db::delete_deep_cleaning_task(&pool, id).await.map_err(|e| {
-        if e.to_string().contains("no rows") {
-            reject::custom(NotFoundError)
-        } else {
-            reject::custom(DatabaseError)
-        }
-    })?;
+    db::delete_deep_cleaning_task(&pool, id)
+        .await
+        .map_err(|e| {
+            if e.to_string().contains("no rows") {
+                reject::custom(NotFoundError)
+            } else {
+                reject::custom(DatabaseError)
+            }
+        })?;
 
     Ok(warp::reply::with_status(
         warp::reply::json(&SuccessResponse {

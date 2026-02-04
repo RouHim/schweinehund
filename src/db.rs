@@ -6,8 +6,7 @@ use sqlx::FromRow;
 
 /// Initialize SQLite connection pool with WAL mode and optimized settings
 pub async fn init_pool(database_url: &str) -> Result<SqlitePool> {
-    let options = SqliteConnectOptions::from_str(database_url)?
-        .create_if_missing(true);
+    let options = SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
 
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
@@ -496,7 +495,10 @@ pub async fn delete_deep_cleaning_task(pool: &SqlitePool, id: i64) -> Result<()>
 }
 
 #[allow(dead_code)]
-pub async fn reorder_deep_cleaning_queue(pool: &SqlitePool, order: &[i64]) -> Result<Vec<DeepCleaningTask>> {
+pub async fn reorder_deep_cleaning_queue(
+    pool: &SqlitePool,
+    order: &[i64],
+) -> Result<Vec<DeepCleaningTask>> {
     for (index, task_id) in order.iter().enumerate() {
         sqlx::query(
             r#"

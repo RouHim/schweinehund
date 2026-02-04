@@ -623,14 +623,14 @@ form button:active {
 
 /* --- Dialog / Modal --- */
 dialog {
-    background: var(--background);
+    background: #FFFFFF;
     color: var(--text);
-    border: none;
+    border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
     padding: 0;
     max-width: 480px;
     width: 92%;
-    box-shadow: 0 16px 40px var(--shadow-lg), 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.15);
     margin: auto;
     animation: modal-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -742,8 +742,9 @@ dialog footer button.secondary:hover {
 }
 
 [data-theme="dark"] dialog {
-    background: var(--background);
-    border: 1px solid var(--border);
+    background: #2A2A2A;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] dialog form {
