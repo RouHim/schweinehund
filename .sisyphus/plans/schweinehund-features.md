@@ -153,7 +153,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 0. Fix Day-of-Week Mapping Bug
+- [x] 0. Fix Day-of-Week Mapping Bug
 
   **What to do**:
   - In `src/routes.rs`: Bei `handle_get_today_tasks` den Default-Wert von `num_days_from_monday()` auf `num_days_from_monday() + 1` ändern
@@ -334,7 +334,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 2. Daily Reset Scheduler (Midnight)
+- [x] 2. Daily Reset Scheduler (Midnight)
 
   **What to do**:
   - In `src/scheduler.rs`: 
@@ -417,7 +417,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 3. Enhanced Daily Notification with Task List
+- [x] 3. Enhanced Daily Notification with Task List
 
   **What to do**:
   - In `src/notifications.rs`: `send_daily_reminder()` erweitern:

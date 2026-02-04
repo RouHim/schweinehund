@@ -288,7 +288,7 @@ section {
 }
 
 .task-item.completed {
-    opacity: 0.65;
+    opacity: 0.5;
     border-left-color: var(--success);
 }
 

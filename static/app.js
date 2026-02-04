@@ -245,7 +245,10 @@ function renderTasks(tasks) {
         return;
     }
     
-    listEl.innerHTML = tasks.map(task => {
+    // Sort tasks: uncompleted first, then completed (stable sort)
+    const sortedTasks = [...tasks].sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
+    
+    listEl.innerHTML = sortedTasks.map(task => {
         const completed = task.completed || false;
         const completedClass = completed ? 'completed' : '';
         

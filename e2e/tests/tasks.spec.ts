@@ -83,4 +83,52 @@ test.describe('Task Management', () => {
     
     expect(reloadedState).toBe(newState);
   });
+
+  test('moves completed task to bottom of list', async ({ page }) => {
+    const tasksList = page.locator('#tasks-list');
+    const firstCheckbox = tasksList.locator('.task-checkbox').first();
+    const firstTaskItem = tasksList.locator('.task-item').first();
+    const firstTaskName = await firstTaskItem.locator('.task-name').textContent();
+    
+    await firstCheckbox.click();
+    await page.waitForTimeout(500);
+    
+    const lastTaskItem = tasksList.locator('.task-item').last();
+    const lastTaskName = await lastTaskItem.locator('.task-name').textContent();
+    
+    expect(lastTaskName).toBe(firstTaskName);
+  });
+
+  test('applies dimmed opacity to completed task', async ({ page }) => {
+    const tasksList = page.locator('#tasks-list');
+    const firstCheckbox = tasksList.locator('.task-checkbox').first();
+    const firstTaskItem = tasksList.locator('.task-item').first();
+    
+    await firstCheckbox.click();
+    await page.waitForTimeout(500);
+    
+    const opacity = await firstTaskItem.evaluate((el) => {
+      return window.getComputedStyle(el).opacity;
+    });
+    
+    const opacityValue = parseFloat(opacity);
+    expect(opacityValue).toBeLessThanOrEqual(0.5);
+  });
+
+  test('maintains task order after page reload', async ({ page }) => {
+    const tasksList = page.locator('#tasks-list');
+    const firstCheckbox = tasksList.locator('.task-checkbox').first();
+    const firstTaskName = await tasksList.locator('.task-item').first().locator('.task-name').textContent();
+    
+    await firstCheckbox.click();
+    await page.waitForTimeout(1000);
+    
+    await page.reload();
+    await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
+    
+    const reloadedTasksList = page.locator('#tasks-list');
+    const reloadedLastTaskName = await reloadedTasksList.locator('.task-item').last().locator('.task-name').textContent();
+    
+    expect(reloadedLastTaskName).toBe(firstTaskName);
+  });
 });
