@@ -1,12 +1,17 @@
+use std::str::FromStr;
+
 use anyhow::Result;
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use sqlx::FromRow;
 
 /// Initialize SQLite connection pool with WAL mode and optimized settings
 pub async fn init_pool(database_url: &str) -> Result<SqlitePool> {
+    let options = SqliteConnectOptions::from_str(database_url)?
+        .create_if_missing(true);
+
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(database_url)
+        .connect_with(options)
         .await?;
 
     // Enable WAL mode for better concurrent access
@@ -131,13 +136,16 @@ pub async fn complete_deep_task(pool: &SqlitePool, id: i64) -> Result<()> {
 
     let new_position = max_pos.0.unwrap_or(0) + 1;
 
+    let now = chrono::Utc::now().timestamp();
+
     sqlx::query(
         r#"
         UPDATE deep_cleaning_tasks
-        SET completed_at = NULL, queue_position = ?
+        SET completed_at = ?, queue_position = ?
         WHERE id = ?
         "#,
     )
+    .bind(now)
     .bind(new_position)
     .bind(id)
     .execute(pool)
