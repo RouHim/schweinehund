@@ -225,3 +225,5 @@ RUST_LOG=info                              # Logging level
   ** Avoid premature optimization
 * Never use #unwrap() in, usage of anyhow or proper error handling
 * Never use #dead_code lints, remove unused code instead
+* Humor is encouraged in comments, commit messages, human interactions, etc., but not in code structure
+  or naming to avoid confusion.
