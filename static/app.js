@@ -348,6 +348,11 @@ async function handleTaskToggle(event) {
             state.tasks[taskIndex] = updatedTask;
         }
         
+        const allCompleted = state.tasks.every(t => t.completed);
+        if (isChecked && allCompleted) {
+            await showFunFact();
+        }
+        
     } catch (error) {
         console.error('Error toggling task:', error);
         
@@ -601,6 +606,52 @@ function updateProgress(done, total) {
         fillEl.classList.add('all-done');
     } else {
         fillEl.classList.remove('all-done');
+    }
+}
+
+async function fetchJoke() {
+    const response = await fetch('https://v2.jokeapi.dev/joke/Any?lang=de&safe-mode&type=single');
+    if (!response.ok) {
+        throw new Error(`Failed to fetch joke: ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (data.error) {
+        throw new Error(data.message || 'No joke found');
+    }
+    return data.joke;
+}
+
+async function showFunFact() {
+    try {
+        const joke = await fetchJoke();
+        const modal = document.getElementById('fun-fact-modal');
+        const jokeText = document.getElementById('fun-fact-text');
+        
+        if (!modal || !jokeText) {
+            console.error('Fun fact modal elements not found');
+            return;
+        }
+        
+        jokeText.textContent = joke;
+        modal.showModal();
+        
+        const autoCloseTimeout = setTimeout(() => {
+            modal.close();
+        }, 15000);
+        
+        modal.addEventListener('close', () => {
+            clearTimeout(autoCloseTimeout);
+        }, { once: true });
+        
+    } catch (error) {
+        console.error('Failed to fetch fun fact:', error);
+    }
+}
+
+function closeFunFactModal() {
+    const modal = document.getElementById('fun-fact-modal');
+    if (modal) {
+        modal.close();
     }
 }
 

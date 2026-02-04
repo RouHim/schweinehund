@@ -756,6 +756,64 @@ dialog footer button.secondary:hover {
     background: var(--background-secondary);
 }
 
+/* --- Fun Fact Modal --- */
+#fun-fact-modal article {
+    max-width: 500px;
+}
+
+#fun-fact-modal header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding-right: 0.75rem;
+}
+
+#fun-fact-modal header h3 {
+    flex: 1;
+}
+
+.close-button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all var(--transition);
+    opacity: 0.8;
+}
+
+.close-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.close-button:active {
+    transform: scale(0.95);
+}
+
+.fun-fact-content {
+    padding: 1.5rem 1.25rem;
+    background: var(--background);
+}
+
+.fun-fact-content p {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--text);
+    margin: 0;
+    text-align: center;
+}
+
 /* --- Tablet — 768px+ --- */
 @media (min-width: 768px) {
     h1 {
