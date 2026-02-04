@@ -1,55 +1,39 @@
 use anyhow::Result;
-use chrono::{Datelike, Local, TimeZone, Timelike, Weekday};
+use chrono::{Local, TimeZone};
 use sqlx::SqlitePool;
 use tokio::task::JoinHandle;
 
-/// Calculate the most recent Monday 00:00 from the given timestamp
-fn get_last_monday_midnight(now: chrono::DateTime<Local>) -> chrono::DateTime<Local> {
-    let current_weekday = now.weekday();
-    let days_since_monday = current_weekday.num_days_from_monday();
+/// Calculate the next midnight (00:00) from the given timestamp
+/// Returns today's midnight if not yet reached, otherwise tomorrow's midnight
+fn get_next_midnight(now: chrono::DateTime<Local>) -> chrono::DateTime<Local> {
+    let today_midnight = Local
+        .from_local_datetime(&now.date_naive().and_hms_opt(0, 0, 0).unwrap())
+        .unwrap();
 
-    let last_monday = now.date_naive() - chrono::Duration::days(days_since_monday as i64);
-    Local
-        .from_local_datetime(&last_monday.and_hms_opt(0, 0, 0).unwrap())
-        .unwrap()
-}
+    // If today's midnight hasn't passed yet, return it
+    if now < today_midnight {
+        return today_midnight;
+    }
 
-/// Calculate the next Monday 00:00 from the given timestamp
-fn get_next_monday_midnight(now: chrono::DateTime<Local>) -> chrono::DateTime<Local> {
-    let current_weekday = now.weekday();
-    let days_until_monday = match current_weekday {
-        Weekday::Mon => {
-            // If it's Monday but past midnight, next Monday is 7 days away
-            if now.hour() > 0 || now.minute() > 0 || now.second() > 0 {
-                7
-            } else {
-                0
-            }
-        }
-        Weekday::Tue => 6,
-        Weekday::Wed => 5,
-        Weekday::Thu => 4,
-        Weekday::Fri => 3,
-        Weekday::Sat => 2,
-        Weekday::Sun => 1,
-    };
-
-    let next_monday = now.date_naive() + chrono::Duration::days(days_until_monday);
-    Local
-        .from_local_datetime(&next_monday.and_hms_opt(0, 0, 0).unwrap())
-        .unwrap()
+    // Otherwise return tomorrow's midnight
+    Local.from_local_datetime(
+        &(now.date_naive() + chrono::Duration::days(1))
+            .and_hms_opt(0, 0, 0)
+            .unwrap(),
+    )
+    .unwrap()
 }
 
 /// Execute a reset: uncheck all daily tasks and update last_reset_at
 async fn execute_reset(pool: &SqlitePool) -> Result<()> {
-    tracing::info!("Executing weekly reset");
+    tracing::info!("Executing daily reset");
 
     crate::db::reset_daily_tasks(pool).await?;
 
     let now = chrono::Utc::now().timestamp();
     crate::db::set_last_reset(pool, now).await?;
 
-    tracing::info!("Weekly reset completed successfully");
+    tracing::info!("Daily reset completed successfully");
     Ok(())
 }
 
@@ -65,13 +49,15 @@ async fn startup_reconciliation(pool: &SqlitePool) -> Result<()> {
     tracing::info!("Last reset was at: {}", last_reset);
 
     let now = Local::now();
-    let last_monday = get_last_monday_midnight(now);
+    let today_midnight = Local
+        .from_local_datetime(&now.date_naive().and_hms_opt(0, 0, 0).unwrap())
+        .unwrap();
 
-    tracing::info!("Last Monday 00:00 was: {}", last_monday);
+    tracing::info!("Today's midnight 00:00: {}", today_midnight);
 
-    // If the most recent Monday 00:00 is after the last reset, we need to reset
-    if last_monday > last_reset {
-        tracing::info!("Monday 00:00 has passed since last reset. Executing catchup reset.");
+    // If today's midnight is after the last reset, we need to reset
+    if today_midnight > last_reset {
+        tracing::info!("Today's midnight has passed since last reset. Executing catchup reset.");
         execute_reset(pool).await?;
     } else {
         tracing::info!("No reset needed - last reset is current");
@@ -80,7 +66,7 @@ async fn startup_reconciliation(pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
-/// Start the weekly reset scheduler background task
+/// Start the daily reset scheduler background task
 pub fn start_scheduler(pool: SqlitePool) -> JoinHandle<()> {
     tokio::spawn(async move {
         // First, do startup reconciliation
@@ -91,12 +77,12 @@ pub fn start_scheduler(pool: SqlitePool) -> JoinHandle<()> {
         // Then start the continuous scheduler loop
         loop {
             let now = Local::now();
-            let next_monday = get_next_monday_midnight(now);
+            let next_midnight = get_next_midnight(now);
 
-            let duration_until_reset = (next_monday.timestamp() - now.timestamp()) as u64;
+            let duration_until_reset = (next_midnight.timestamp() - now.timestamp()) as u64;
             tracing::info!(
                 "Next reset scheduled for {} (in {} seconds)",
-                next_monday,
+                next_midnight,
                 duration_until_reset
             );
 
@@ -122,12 +108,12 @@ pub async fn trigger_reset_now(pool: &SqlitePool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::NaiveDate;
+    use chrono::{Datelike, NaiveDate, Timelike};
 
     #[test]
-    fn test_get_last_monday_midnight() {
-        // Test on a Wednesday
-        let wed = Local
+    fn test_get_next_midnight() {
+        // Test on a Wednesday afternoon - should return tomorrow midnight
+        let wed_afternoon = Local
             .from_local_datetime(
                 &NaiveDate::from_ymd_opt(2025, 1, 8)
                     .unwrap()
@@ -135,52 +121,37 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-        let last_monday = get_last_monday_midnight(wed);
-        assert_eq!(last_monday.weekday(), Weekday::Mon);
-        assert_eq!(last_monday.hour(), 0);
-        assert_eq!(last_monday.minute(), 0);
-        assert_eq!(last_monday.day(), 6); // Jan 6 is Monday
+        let next_midnight = get_next_midnight(wed_afternoon);
+        assert_eq!(next_midnight.hour(), 0);
+        assert_eq!(next_midnight.minute(), 0);
+        assert_eq!(next_midnight.day(), 9); // Tomorrow is Jan 9
 
-        // Test on a Monday morning (should return same Monday)
-        let mon = Local
+        // Test on midnight exactly - should return tomorrow midnight
+        let midnight_exact = Local
             .from_local_datetime(
-                &NaiveDate::from_ymd_opt(2025, 1, 6)
+                &NaiveDate::from_ymd_opt(2025, 1, 8)
                     .unwrap()
                     .and_hms_opt(0, 0, 0)
                     .unwrap(),
             )
             .unwrap();
-        let last_monday = get_last_monday_midnight(mon);
-        assert_eq!(last_monday.day(), 6);
-    }
+        let next_midnight = get_next_midnight(midnight_exact);
+        assert_eq!(next_midnight.hour(), 0);
+        assert_eq!(next_midnight.minute(), 0);
+        assert_eq!(next_midnight.day(), 9); // Tomorrow
 
-    #[test]
-    fn test_get_next_monday_midnight() {
-        // Test on a Wednesday
-        let wed = Local
+        // Test near midnight (23:59) - should return tomorrow midnight since today's midnight is in the past
+        let before_midnight = Local
             .from_local_datetime(
                 &NaiveDate::from_ymd_opt(2025, 1, 8)
                     .unwrap()
-                    .and_hms_opt(15, 30, 0)
+                    .and_hms_opt(23, 59, 0)
                     .unwrap(),
             )
             .unwrap();
-        let next_monday = get_next_monday_midnight(wed);
-        assert_eq!(next_monday.weekday(), Weekday::Mon);
-        assert_eq!(next_monday.hour(), 0);
-        assert_eq!(next_monday.minute(), 0);
-        assert_eq!(next_monday.day(), 13); // Jan 13 is next Monday
-
-        // Test on Sunday
-        let sun = Local
-            .from_local_datetime(
-                &NaiveDate::from_ymd_opt(2025, 1, 12)
-                    .unwrap()
-                    .and_hms_opt(23, 0, 0)
-                    .unwrap(),
-            )
-            .unwrap();
-        let next_monday = get_next_monday_midnight(sun);
-        assert_eq!(next_monday.day(), 13); // Jan 13 is next day (Monday)
+        let next_midnight = get_next_midnight(before_midnight);
+        assert_eq!(next_midnight.hour(), 0);
+        assert_eq!(next_midnight.minute(), 0);
+        assert_eq!(next_midnight.day(), 9); // Next day is Jan 9
     }
 }

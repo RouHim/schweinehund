@@ -87,6 +87,22 @@ pub async fn get_deep_cleaning_queue(pool: &SqlitePool) -> Result<Vec<DeepCleani
     Ok(tasks)
 }
 
+/// Get the first deep cleaning task (lowest queue_position)
+pub async fn get_top_deep_cleaning_task(pool: &SqlitePool) -> Result<Option<DeepCleaningTask>> {
+    let task = sqlx::query_as::<_, DeepCleaningTask>(
+        r#"
+        SELECT id, name, description, zone, queue_position, completed_at
+        FROM deep_cleaning_tasks
+        ORDER BY queue_position ASC
+        LIMIT 1
+        "#,
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(task)
+}
+
 /// Toggle task completed status and update completed_at timestamp
 pub async fn toggle_task(pool: &SqlitePool, id: i64) -> Result<()> {
     let task: (bool,) = sqlx::query_as(
@@ -570,6 +586,24 @@ pub mod tests {
 
         assert_eq!(completed_task.queue_position, 5);
         assert!(completed_task.completed_at.is_some());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_top_deep_cleaning_task() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let top_task = get_top_deep_cleaning_task(&pool).await?;
+        assert!(top_task.is_some());
+
+        let top = top_task.unwrap();
+        assert_eq!(top.queue_position, 1);
+
+        let all_tasks = get_deep_cleaning_queue(&pool).await?;
+        let first = &all_tasks[0];
+        assert_eq!(top.id, first.id);
+        assert_eq!(top.name, first.name);
 
         Ok(())
     }

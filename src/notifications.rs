@@ -69,22 +69,34 @@ impl NtfyClient {
             return Ok(());
         }
 
-        // Get count of incomplete tasks for today
+        // Get today's incomplete tasks
         let day_of_week = now.weekday().num_days_from_monday() as i64 + 1;
         let tasks = crate::db::get_today_tasks(pool, day_of_week).await?;
-        let incomplete_count = tasks.iter().filter(|t| !t.completed).count();
+        let incomplete_tasks: Vec<_> = tasks.iter().filter(|t| !t.completed).collect();
+
+        // Get top deep cleaning task
+        let top_deep_task = crate::db::get_top_deep_cleaning_task(pool).await?;
+
+        // Build message with task list
+        let mut message = "🧹 Heute zu tun:\n".to_string();
+
+        if !incomplete_tasks.is_empty() {
+            for task in &incomplete_tasks {
+                message.push_str(&format!("• {}\n", task.name));
+            }
+        } else {
+            message.push_str("• Alle Aufgaben erledigt!\n");
+        }
+
+        message.push('\n');
+
+        if let Some(deep_task) = top_deep_task {
+            message.push_str(&format!("🔷 Deep Clean: {}", deep_task.name));
+        }
 
         let title = "Schweinehund Reminder";
-        let message = if incomplete_count > 0 {
-            format!(
-                "Schweinehund sagt: Zeit für die Hausarbeit! 🧹\n\nYou have {} incomplete tasks today.",
-                incomplete_count
-            )
-        } else {
-            "Schweinehund sagt: Zeit für die Hausarbeit! 🧹\n\nAll tasks completed today! Great job!".to_string()
-        };
 
-        // Priority: 3 (default), could be 4 (high) or 5 (urgent) for urgent reminders
+        // Priority: 3 (default)
         self.send_reminder(title, &message, 3)?;
 
         Ok(())
