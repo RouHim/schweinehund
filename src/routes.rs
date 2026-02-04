@@ -124,9 +124,9 @@ async fn handle_get_today_tasks(
 ) -> Result<impl Reply, Rejection> {
     let day_of_week = if let Some(day) = params.get("day_of_week") {
         day.parse::<i64>()
-            .unwrap_or_else(|_| chrono::Local::now().weekday().num_days_from_monday() as i64)
+            .unwrap_or_else(|_| chrono::Local::now().weekday().num_days_from_monday() as i64 + 1)
     } else {
-        chrono::Local::now().weekday().num_days_from_monday() as i64
+        chrono::Local::now().weekday().num_days_from_monday() as i64 + 1
     };
 
     let tasks = db::get_today_tasks(&pool, day_of_week)
@@ -154,7 +154,7 @@ async fn handle_toggle_task(id: i64, pool: SqlitePool) -> Result<impl Reply, Rej
 
     let tasks = db::get_today_tasks(
         &pool,
-        chrono::Local::now().weekday().num_days_from_monday() as i64,
+        chrono::Local::now().weekday().num_days_from_monday() as i64 + 1,
     )
     .await
     .map_err(|_| reject::custom(DatabaseError))?;

@@ -70,7 +70,7 @@ impl NtfyClient {
         }
 
         // Get count of incomplete tasks for today
-        let day_of_week = now.weekday().num_days_from_monday() as i64;
+        let day_of_week = now.weekday().num_days_from_monday() as i64 + 1;
         let tasks = crate::db::get_today_tasks(pool, day_of_week).await?;
         let incomplete_count = tasks.iter().filter(|t| !t.completed).count();
 
