@@ -36,6 +36,15 @@
                 <h2>Today's Tasks</h2>
                 <button id="add-daily-task-btn" class="add-btn" data-testid="add-daily-task-btn" aria-label="Add daily task">+ Add</button>
             </div>
+            <div class="progress-container" id="tasks-progress" style="display: none;">
+                <div class="progress-text">
+                    <span class="progress-label">Progress</span>
+                    <span class="progress-count"><span id="tasks-done">0</span> / <span id="tasks-total">0</span></span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
             <div id="tasks-loading" class="loading">Loading tasks...</div>
             <div id="tasks-error" class="error" style="display: none;"></div>
             <ul id="tasks-list" class="task-list" style="display: none;"></ul>
@@ -58,10 +67,13 @@
             <div id="settings-loading" class="loading">Loading settings...</div>
             <div id="settings-error" class="error" style="display: none;"></div>
             <form id="settings-form" style="display: none;">
-                <label>
-                    <input type="checkbox" id="notification-enabled" name="notification_enabled">
-                    Enable daily notifications
-                </label>
+                <div class="toggle-row">
+                    <label for="notification-enabled">Daily notifications</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="notification-enabled" name="notification_enabled">
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
                 <label for="notification-time">
                     Notification time
                     <input type="time" id="notification-time" name="notification_time">

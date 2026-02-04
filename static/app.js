@@ -240,7 +240,8 @@ function renderTasks(tasks) {
     const listEl = document.getElementById('tasks-list');
     
     if (tasks.length === 0) {
-        listEl.innerHTML = '<li style="text-align: center; padding: 2rem; color: var(--text-secondary);">No tasks for today!</li>';
+        listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">✨</div><p>No tasks for today — enjoy your free time!</p></li>';
+        updateProgress(0, 0);
         return;
     }
     
@@ -279,6 +280,9 @@ function renderTasks(tasks) {
     }).join('');
     
     attachTaskListeners();
+    
+    const completedCount = tasks.filter(t => t.completed).length;
+    updateProgress(completedCount, tasks.length);
 }
 
 function attachTaskListeners() {
@@ -319,6 +323,9 @@ async function handleTaskToggle(event) {
         taskItem.classList.remove('completed');
     }
     
+    const completedCount = state.tasks.filter(t => t.id === parseInt(taskId) ? isChecked : t.completed).length;
+    updateProgress(completedCount, state.tasks.length);
+    
     try {
         const response = await fetch(`${API_BASE}/tasks/${taskId}/toggle`, {
             method: 'POST',
@@ -347,6 +354,9 @@ async function handleTaskToggle(event) {
         } else {
             taskItem.classList.add('completed');
         }
+        
+        const revertedCount = state.tasks.filter(t => t.completed).length;
+        updateProgress(revertedCount, state.tasks.length);
         
         alert(`Failed to update task: ${error.message}`);
     }
@@ -383,7 +393,7 @@ function renderDeepCleaning(tasks) {
     const listEl = document.getElementById('deep-cleaning-list');
     
     if (tasks.length === 0) {
-        listEl.innerHTML = '<li style="text-align: center; padding: 2rem; color: var(--text-secondary);">No deep cleaning tasks in queue!</li>';
+        listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">🧹</div><p>No deep cleaning tasks in queue</p></li>';
         return;
     }
     
@@ -562,6 +572,33 @@ function escapeHtml(text) {
 function getDayName(dayNumber) {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     return days[dayNumber - 1] || '';
+}
+
+function updateProgress(done, total) {
+    const container = document.getElementById('tasks-progress');
+    const doneEl = document.getElementById('tasks-done');
+    const totalEl = document.getElementById('tasks-total');
+    const fillEl = document.getElementById('progress-fill');
+    
+    if (!container || !doneEl || !totalEl || !fillEl) return;
+    
+    if (total === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    doneEl.textContent = done;
+    totalEl.textContent = total;
+    
+    const percent = Math.round((done / total) * 100);
+    fillEl.style.width = `${percent}%`;
+    
+    if (done === total) {
+        fillEl.classList.add('all-done');
+    } else {
+        fillEl.classList.remove('all-done');
+    }
 }
 
 function init() {
