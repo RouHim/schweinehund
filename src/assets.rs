@@ -46,6 +46,7 @@ async fn serve_static(path: warp::path::FullPath) -> Result<impl warp::Reply, wa
         }
         None => {
             tracing::debug!("File not found in embedded assets: {}", file_path);
+
             if file_path != "index.html" {
                 tracing::debug!("Falling back to index.html");
                 match Assets::get("index.html") {
