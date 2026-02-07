@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/RouHim/schweinehund/compare/v1.1.3...v1.1.4) (2026-02-07)
+
+
+### Bug Fixes
+
+* **container:** run as uid 1000 and embed debug static assets ([c17d1e7](https://github.com/RouHim/schweinehund/commit/c17d1e71c4b4656acc29c627f84ae42b6cd16de1))
+
 ## [1.1.3](https://github.com/RouHim/schweinehund/compare/v1.1.2...v1.1.3) (2026-02-07)
 
 
