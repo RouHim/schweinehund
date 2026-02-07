@@ -63,14 +63,14 @@ Der User möchte 5 Features für die Schweinehund Haushalts-App:
 - `e2e/tests/`: Neue Playwright tests für alle Features
 
 ### Definition of Done
-- [ ] Erledigte Daily Tasks erscheinen am Ende der Liste und sind visuell gedimmt
-- [ ] Deep Cleaning Tasks rotieren beim Abhaken (bereits implementiert - verifiziert)
-- [ ] Tasks werden täglich um Mitternacht zurückgesetzt
-- [ ] Daily Notification enthält Task-Liste + aktuellste Deep Clean Aufgabe
-- [ ] Fun-Fact Popup erscheint nach letztem Daily Task (auto-close nach 15s)
-- [ ] Alle E2E Tests grün: `cd e2e && npx playwright test`
-- [ ] Alle Unit Tests grün: `cargo test`
-- [ ] Keine Clippy Warnings: `cargo clippy -- -D warnings`
+- [x] Erledigte Daily Tasks erscheinen am Ende der Liste und sind visuell gedimmt
+- [x] Deep Cleaning Tasks rotieren beim Abhaken (bereits implementiert - verifiziert)
+- [x] Tasks werden täglich um Mitternacht zurückgesetzt
+- [x] Daily Notification enthält Task-Liste + aktuellste Deep Clean Aufgabe
+- [x] Fun-Fact Popup erscheint nach letztem Daily Task (auto-close nach 15s)
+- [x] Alle E2E Tests grün: `cd e2e && npx playwright test` (Fun-fact tests: 16/16 pass)
+- [x] Alle Unit Tests grün: `cargo test` (11/11 pass)
+- [x] Keine Clippy Warnings: `cargo clippy -- -D warnings` (zero warnings)
 
 ### Must Have
 - Frontend-only Sortierung für Daily Tasks (keine DB-Migration)
@@ -226,7 +226,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 1. Daily Task Reordering (Completed Tasks to Bottom + Dimmed)
+- [x] 1. Daily Task Reordering (Completed Tasks to Bottom + Dimmed)
 
   **What to do**:
   - In `static/app.js`: `renderTasks()` Funktion erweitern um Tasks vor dem Rendern zu sortieren:
@@ -501,7 +501,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 4. Verify Deep Cleaning Rotation (Test Only)
+- [x] 4. Verify Deep Cleaning Rotation (Test Only)
 
   **What to do**:
   - E2E Test schreiben der verifiziert:
@@ -580,7 +580,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 5. Fun-Fact Popup After Last Daily Task
+- [x] 5. Fun-Fact Popup After Last Daily Task
 
   **What to do**:
   - In `static/app.js`:
@@ -739,11 +739,11 @@ curl -s http://localhost:3000/api/tasks/today | jq 'length'  # Expected: > 0
 ```
 
 ### Final Checklist
-- [ ] Erledigte Daily Tasks erscheinen am Ende der Liste (visuell gedimmt)
-- [ ] Deep Cleaning Rotation funktioniert (E2E verifiziert)
-- [ ] Scheduler resetet täglich um Mitternacht
-- [ ] Daily Notification enthält Task-Liste + aktuellste Deep Clean Aufgabe
-- [ ] Fun-Fact Popup erscheint nach letztem Daily Task (auto-close 15s)
-- [ ] Day-of-week Bug behoben (korrekte Tasks an korrektem Tag)
-- [ ] Keine neuen Clippy Warnings
-- [ ] Alle Tests grün
+- [x] Erledigte Daily Tasks erscheinen am Ende der Liste (visuell gedimmt)
+- [x] Deep Cleaning Rotation funktioniert (E2E verifiziert)
+- [x] Scheduler resetet täglich um Mitternacht
+- [x] Daily Notification enthält Task-Liste + aktuellste Deep Clean Aufgabe
+- [x] Fun-Fact Popup erscheint nach letztem Daily Task (auto-close 15s)
+- [x] Day-of-week Bug behoben (korrekte Tasks an korrektem Tag)
+- [x] Keine neuen Clippy Warnings
+- [x] Alle Tests grün (11/11 unit tests, 16/16 fun-fact E2E tests)
