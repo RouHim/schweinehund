@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/RouHim/schweinehund/compare/v1.1.2...v1.1.3) (2026-02-07)
+
+
+### Bug Fixes
+
+* **ci:** pass musl binary via artifacts between release jobs ([0700da4](https://github.com/RouHim/schweinehund/commit/0700da47281a469884067c90f14892f46cca703b))
+
 ## [1.1.2](https://github.com/RouHim/schweinehund/compare/v1.1.1...v1.1.2) (2026-02-07)
 
 
