@@ -5,20 +5,20 @@ edition = "2021"
 
 [dependencies]
 # Web framework
-warp = "0.3"
+warp = { version = "0.4", features = ["server"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
 # Database
-sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
 chrono = "0.4"
 
 # HTTP client for ntfy
-ureq = "2.10"
+ureq = "3.2"
 
 # Static file embedding
-rust-embed = { version = "8.4", features = ["debug-embed"] }
+rust-embed = { version = "8.11", features = ["debug-embed"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

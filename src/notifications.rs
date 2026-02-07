@@ -89,7 +89,7 @@ impl NtfyClient {
         let config = load_ntfy_config();
 
         Self {
-            agent: ureq::AgentBuilder::new().build(),
+            agent: ureq::agent(),
             topic: config.topic,
             server: config.server,
         }
@@ -102,13 +102,13 @@ impl NtfyClient {
         match self
             .agent
             .post(&url)
-            .set("Title", title)
-            .set("Priority", &priority.to_string())
-            .set("Tags", "schweinehund")
-            .send_string(message)
+            .header("Title", title)
+            .header("Priority", &priority.to_string())
+            .header("Tags", "schweinehund")
+            .send(message.as_bytes())
         {
             Ok(response) => {
-                if response.status() == 200 {
+                if response.status().as_u16() == 200 {
                     info!("Notification sent to schweinehund: {} - {}", title, message);
                     Ok(())
                 } else {

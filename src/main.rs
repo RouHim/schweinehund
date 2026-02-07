@@ -36,9 +36,13 @@ async fn main() -> anyhow::Result<()> {
     let addr: SocketAddr = "0.0.0.0:9666".parse()?;
     tracing::info!("Starting server on {}", addr);
 
-    let (_, server) = warp::serve(all_routes).bind_with_graceful_shutdown(addr, shutdown_signal());
+    warp::serve(all_routes)
+        .bind(addr)
+        .await
+        .graceful(shutdown_signal())
+        .run()
+        .await;
 
-    server.await;
     tracing::info!("Server shutdown gracefully");
 
     Ok(())
