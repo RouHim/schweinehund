@@ -53,7 +53,8 @@ export default defineConfig({
     port: 9666,
     reuseExistingServer: !process.env.CI,
     env: {
-      DATABASE_URL: 'sqlite:data/schweinehund.db',
+      DATABASE_URL: process.env.DATABASE_URL ?? 'sqlite:data/schweinehund.db',
+      NTFY_TOPIC: 'schweinehund-e2e-test',
     },
   },
 });

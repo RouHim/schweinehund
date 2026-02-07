@@ -58,6 +58,9 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        env:
+          DATABASE_URL: sqlite:test.db
+          NTFY_TOPIC: schweinehund-ci-${{ github.run_id }}
         run: |
           cd e2e
           npx playwright test
