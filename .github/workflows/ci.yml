@@ -161,16 +161,20 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target x86_64-unknown-linux-musl
 
-      - name: Install GitHub CLI
-        run: apk add --no-cache github-cli
+      - name: Upload musl binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: schweinehund-musl-binary
+          path: target/x86_64-unknown-linux-musl/release/schweinehund
 
       - name: Upload binary to release
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          gh release upload ${{ steps.get_tag.outputs.tag }} \
-            target/x86_64-unknown-linux-musl/release/schweinehund \
-            --clobber
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          files: target/x86_64-unknown-linux-musl/release/schweinehund
+          overwrite_files: true
 
   build-container:
     name: Build and push container image
@@ -184,22 +188,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get latest tag
-        id: get_tag
-        run: |
-          TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1)
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-      - name: Download musl binary from release
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          mkdir -p target/x86_64-unknown-linux-musl/release
-          gh release download ${{ steps.get_tag.outputs.tag }} --pattern schweinehund --dir target/x86_64-unknown-linux-musl/release
-          chmod +x target/x86_64-unknown-linux-musl/release/schweinehund
+      - name: Download musl binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: schweinehund-musl-binary
+          path: target/x86_64-unknown-linux-musl/release
 
       - name: Verify downloaded binary
-        run: file target/x86_64-unknown-linux-musl/release/schweinehund
+        run: |
+          chmod +x target/x86_64-unknown-linux-musl/release/schweinehund
+          file target/x86_64-unknown-linux-musl/release/schweinehund
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
