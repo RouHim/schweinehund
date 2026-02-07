@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/RouHim/schweinehund/compare/v1.1.0...v1.1.1) (2026-02-07)
+
+
+### Bug Fixes
+
+* **ci:** wire release outputs and artifact flow ([149a669](https://github.com/RouHim/schweinehund/commit/149a669ea29bc82375aca3a61b2c5948ce9534c9))
+
 # [1.1.0](https://github.com/RouHim/schweinehund/compare/v1.0.0...v1.1.0) (2026-02-07)
 
 
