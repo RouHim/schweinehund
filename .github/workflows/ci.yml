@@ -127,7 +127,7 @@ jobs:
   build-binaries:
     name: Build and upload release binaries
     needs: create-release
-    if: github.ref == 'refs/heads/main' && needs.create-release.outputs.new_release_published == 'true'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     container:
@@ -144,11 +144,13 @@ jobs:
 
       - name: Get latest tag
         id: get_tag
+        if: needs.create-release.outputs.new_release_published == 'true'
         run: |
           TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Checkout tag
+        if: needs.create-release.outputs.new_release_published == 'true'
         run: |
           git fetch --tags
           git checkout ${{ steps.get_tag.outputs.tag }}
@@ -173,6 +175,7 @@ jobs:
           path: target/x86_64-unknown-linux-musl/release/schweinehund
 
       - name: Upload binary to release
+        if: needs.create-release.outputs.new_release_published == 'true'
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
@@ -186,7 +189,7 @@ jobs:
     needs:
       - create-release
       - build-binaries
-    if: github.ref == 'refs/heads/main' && needs.create-release.outputs.new_release_published == 'true'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -212,11 +215,19 @@ jobs:
 
       - name: Build container image
         run: |
-          podman build -t ghcr.io/rouhim/schweinehund:latest \
-            -t ghcr.io/rouhim/schweinehund:${{ needs.create-release.outputs.new_release_version }} \
-            -f Containerfile.pipeline .
+          podman build -t ghcr.io/rouhim/schweinehund:latest -f Containerfile.pipeline .
+
+      - name: Tag release image
+        if: needs.create-release.outputs.new_release_published == 'true'
+        run: |
+          podman tag ghcr.io/rouhim/schweinehund:latest \
+            ghcr.io/rouhim/schweinehund:${{ needs.create-release.outputs.new_release_version }}
 
       - name: Push container images
         run: |
           podman push ghcr.io/rouhim/schweinehund:latest
+
+      - name: Push versioned container image
+        if: needs.create-release.outputs.new_release_published == 'true'
+        run: |
           podman push ghcr.io/rouhim/schweinehund:${{ needs.create-release.outputs.new_release_version }}
