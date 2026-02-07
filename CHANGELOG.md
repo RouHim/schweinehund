@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/RouHim/schweinehund/compare/v1.1.1...v1.1.2) (2026-02-07)
+
+
+### Bug Fixes
+
+* **ci:** install gh before uploading release binary ([814739c](https://github.com/RouHim/schweinehund/commit/814739c9a29e8a164ce75110f61ad76ad14802da))
+
 ## [1.1.1](https://github.com/RouHim/schweinehund/compare/v1.1.0...v1.1.1) (2026-02-07)
 
 
