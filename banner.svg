@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+  <defs>
+    <style>
+      .primary { fill: #FF7F66; }
+      .secondary { fill: #FF6B52; }
+      .accent { fill: #FFB5A7; }
+      .dark { fill: #2D2D2D; }
+      .text-main { fill: #2D2D2D; font-family: system-ui, -apple-system, sans-serif; font-weight: bold; }
+      .text-tagline { fill: #666; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="200" fill="#FAFAFA"/>
+  
+  <!-- Mascot (scaled and positioned on left) -->
+  <g transform="translate(50, 20) scale(0.8)">
+    <!-- Body -->
+    <ellipse cx="100" cy="120" rx="60" ry="45" class="primary"/>
+    <!-- Head -->
+    <circle cx="100" cy="70" r="35" class="primary"/>
+    <!-- Ears -->
+    <ellipse cx="75" cy="50" rx="15" ry="25" class="secondary" transform="rotate(-20 75 50)"/>
+    <ellipse cx="125" cy="50" rx="15" ry="25" class="secondary" transform="rotate(20 125 50)"/>
+    <!-- Snout -->
+    <ellipse cx="100" cy="80" rx="18" ry="15" class="accent"/>
+    <circle cx="95" cy="78" r="3" class="dark"/>
+    <circle cx="105" cy="78" r="3" class="dark"/>
+    <!-- Eyes -->
+    <ellipse cx="88" cy="65" rx="4" ry="6" class="dark"/>
+    <ellipse cx="112" cy="65" rx="4" ry="6" class="dark"/>
+    <!-- Legs -->
+    <ellipse cx="75" cy="155" rx="12" ry="18" class="secondary"/>
+    <ellipse cx="105" cy="155" rx="12" ry="18" class="secondary"/>
+    <!-- Tail -->
+    <path d="M 155 115 Q 165 105, 170 115 T 180 115" stroke="#FF6B52" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <!-- Paw pads -->
+    <circle cx="75" cy="165" r="4" class="accent"/>
+    <circle cx="105" cy="165" r="4" class="accent"/>
+  </g>
+  
+  <!-- Title Text -->
+  <text x="260" y="95" class="text-main" font-size="56">Schweinehund</text>
+  
+  <!-- Tagline -->
+  <text x="260" y="130" class="text-tagline" font-size="20">Household Cleaning Task Manager</text>
+  
+  <!-- Decorative accent line -->
+  <line x1="260" y1="145" x2="450" y2="145" stroke="#FF7F66" stroke-width="3" stroke-linecap="round"/>
+</svg>
