@@ -1,0 +1,204 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+    types:
+      - opened
+  workflow_dispatch: # allow manual execution
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  check:
+    name: Check, build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Rust format
+        run: cargo fmt --all -- --check
+
+      - name: Run Rust linter
+        run: cargo clippy -- -D warnings
+
+      - name: Run unit tests
+        run: cargo test
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Upload release binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: schweinehund-binary
+          path: target/release/schweinehund
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright browsers
+        run: |
+          cd e2e
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start server in background
+        env:
+          DATABASE_URL: sqlite:test.db
+        run: |
+          ./target/release/schweinehund &
+          echo $! > server.pid
+
+      - name: Wait for server to be ready
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:9666/api/health; do sleep 1; done'
+
+      - name: Run E2E tests
+        run: |
+          cd e2e
+          npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+          fi
+
+  create-release:
+    name: Create release
+    needs: check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install semantic-release dependencies
+        run: |
+          npm install -g \
+            semantic-release \
+            @semantic-release/git \
+            @semantic-release/changelog \
+            @semantic-release/exec \
+            @semantic-release/commit-analyzer \
+            @semantic-release/release-notes-generator \
+            conventional-changelog-conventionalcommits
+
+      - name: Generate Semantic Release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: npx semantic-release
+
+  build-binaries:
+    name: Build and upload release binaries
+    needs: create-release
+    if: github.ref == 'refs/heads/main' && needs.create-release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/rust-cross/rust-musl-cross:x86_64-musl
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory /__w/schweinehund/schweinehund
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Checkout tag
+        run: |
+          git fetch --tags
+          git checkout ${{ steps.get_tag.outputs.tag }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: x86_64-unknown-linux-musl
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: Upload binary to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release upload ${{ steps.get_tag.outputs.tag }} \
+            target/x86_64-unknown-linux-musl/release/schweinehund \
+            --clobber
+
+  build-container:
+    name: Build and push container image
+    needs: build-binaries
+    if: github.ref == 'refs/heads/main' && needs.create-release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download musl binary
+        uses: actions/download-artifact@v4
+        with:
+          name: schweinehund-binary
+          path: ./
+
+      - name: Make binary executable
+        run: chmod +x schweinehund
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build container image
+        run: |
+          podman build -t ghcr.io/rouhim/schweinehund:latest \
+            -t ghcr.io/rouhim/schweinehund:${{ needs.create-release.outputs.new_release_version }} \
+            -f Containerfile .
+
+      - name: Push container images
+        run: |
+          podman push ghcr.io/rouhim/schweinehund:latest
+          podman push ghcr.io/rouhim/schweinehund:${{ needs.create-release.outputs.new_release_version }}
