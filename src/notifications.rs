@@ -1,7 +1,80 @@
 use anyhow::Result;
 use chrono::{Datelike, Timelike};
+use serde::Serialize;
 use sqlx::SqlitePool;
 use tracing::{error, info};
+
+const DEFAULT_NTFY_TOPIC: &str = "schweinehund";
+const DEFAULT_NTFY_SERVER: &str = "https://ntfy.sh";
+
+struct NtfyConfig {
+    topic: String,
+    server: String,
+    topic_from_env: bool,
+    server_from_env: bool,
+}
+
+#[derive(Serialize)]
+pub struct NotificationRuntimeConfig {
+    topic_masked: String,
+    server: String,
+    topic_source: String,
+    server_source: String,
+}
+
+fn load_ntfy_config() -> NtfyConfig {
+    let (topic, topic_from_env) = match std::env::var("NTFY_TOPIC") {
+        Ok(value) => (value, true),
+        Err(_) => (DEFAULT_NTFY_TOPIC.to_string(), false),
+    };
+
+    let (server, server_from_env) = match std::env::var("NTFY_SERVER") {
+        Ok(value) => (value, true),
+        Err(_) => (DEFAULT_NTFY_SERVER.to_string(), false),
+    };
+
+    NtfyConfig {
+        topic,
+        server,
+        topic_from_env,
+        server_from_env,
+    }
+}
+
+fn mask_topic(topic: &str) -> String {
+    let chars: Vec<char> = topic.chars().collect();
+    let len = chars.len();
+
+    if len <= 4 {
+        return "****".to_string();
+    }
+
+    let prefix_len = if len > 10 { 4 } else { 2 };
+    let suffix_len = if len > 10 { 4 } else { 2 };
+    let prefix: String = chars[..prefix_len].iter().collect();
+    let suffix: String = chars[len - suffix_len..].iter().collect();
+
+    format!("{prefix}***{suffix}")
+}
+
+pub fn get_runtime_config() -> NotificationRuntimeConfig {
+    let config = load_ntfy_config();
+
+    NotificationRuntimeConfig {
+        topic_masked: mask_topic(&config.topic),
+        server: config.server,
+        topic_source: if config.topic_from_env {
+            "env".to_string()
+        } else {
+            "default".to_string()
+        },
+        server_source: if config.server_from_env {
+            "env".to_string()
+        } else {
+            "default".to_string()
+        },
+    }
+}
 
 /// ntfy client for sending push notifications
 pub struct NtfyClient {
@@ -13,13 +86,12 @@ pub struct NtfyClient {
 impl NtfyClient {
     /// Create a new ntfy client with configuration from environment
     pub fn new() -> Self {
-        let topic = std::env::var("NTFY_TOPIC").unwrap_or_else(|_| "schweinehund".to_string());
-        let server = std::env::var("NTFY_SERVER").unwrap_or_else(|_| "https://ntfy.sh".to_string());
+        let config = load_ntfy_config();
 
         Self {
             agent: ureq::AgentBuilder::new().build(),
-            topic,
-            server,
+            topic: config.topic,
+            server: config.server,
         }
     }
 
@@ -125,9 +197,28 @@ pub async fn send_daily_reminder(pool: &SqlitePool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    #[test]
+    fn test_mask_topic() {
+        assert_eq!(mask_topic("abcd"), "****");
+        assert_eq!(mask_topic("abcdef"), "ab***ef");
+        assert_eq!(mask_topic("schweinehund-topic"), "schw***opic");
+    }
 
     #[test]
     fn test_ntfy_client_creation() {
+        let _guard = env_lock().lock().expect("env lock poisoned");
+        unsafe {
+            std::env::remove_var("NTFY_TOPIC");
+            std::env::remove_var("NTFY_SERVER");
+        }
+
         let client = NtfyClient::new();
         assert_eq!(client.topic, "schweinehund");
         assert_eq!(client.server, "https://ntfy.sh");
@@ -135,6 +226,7 @@ mod tests {
 
     #[test]
     fn test_ntfy_client_with_env() {
+        let _guard = env_lock().lock().expect("env lock poisoned");
         unsafe {
             std::env::set_var("NTFY_TOPIC", "test-topic");
             std::env::set_var("NTFY_SERVER", "https://test.ntfy.sh");

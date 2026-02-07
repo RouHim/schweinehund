@@ -98,6 +98,7 @@ pub fn api_routes(
         .or(update_task(pool.clone()))
         .or(delete_task(pool.clone()))
         .or(debug_reset(pool.clone()))
+        .or(debug_notify_status(pool.clone()))
         .or(debug_notify(pool))
         .with(cors)
 }
@@ -505,6 +506,19 @@ fn debug_notify(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = R
         .and(warp::post())
         .and(with_db(pool))
         .and_then(handle_debug_notify)
+}
+
+fn debug_notify_status(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "debug" / "notify-status")
+        .and(warp::get())
+        .and(with_db(pool))
+        .and_then(handle_debug_notify_status)
+}
+
+async fn handle_debug_notify_status(_pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    Ok(warp::reply::json(&notifications::get_runtime_config()))
 }
 
 async fn handle_debug_notify(_pool: SqlitePool) -> Result<impl Reply, Rejection> {

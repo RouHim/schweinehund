@@ -175,6 +175,7 @@ sqlx migrate add <migration_name>
 
 - `POST /api/debug/reset` - Reset all daily tasks to unchecked
 - `POST /api/debug/notify` - Test notification
+- `GET /api/debug/notify-status` - Show effective ntfy runtime config (masked topic)
 
 ## Project Structure
 
