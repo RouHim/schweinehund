@@ -35,3 +35,6 @@ build/
 # Coverage
 tarpaulin-report.html
 cobertura.xml
+
+# AI agent artifacts
+.sisyphus/
