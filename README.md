@@ -1,138 +1,92 @@
-# Schweinehund
+![Schweinehund](banner.svg)
 
-A minimalist web application for managing household cleaning tasks and building sustainable cleaning habits.
+[![CI](https://github.com/RouHim/schweinehund/actions/workflows/ci.yml/badge.svg)](https://github.com/RouHim/schweinehund/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Features
+> A minimalist household cleaning task manager — build sustainable cleaning habits with daily tasks and deep cleaning zones.
 
-- **Daily Task Management**: Organize cleaning tasks by day of the week
-- **Deep Cleaning Queue**: Rotate through deep cleaning tasks in a systematic way
-- **Progressive Web App (PWA)**: Install on mobile devices for a native app experience
-- **Dark/Light Mode**: Automatic theme switching based on system preferences
-- **Push Notifications**: Optional ntfy.sh integration for daily reminders
-- **Persistence**: All task states and settings stored in SQLite
-- **Mobile-Optimized**: Touch-friendly interface designed for phone use
+## What is Schweinehund?
 
-## Tech Stack
+Schweinehund (German for "inner couch potato") is a self-hosted web application for managing household cleaning tasks. It helps you overcome the "inner pig-dog" that resists doing chores by organizing cleaning into manageable daily tasks and systematic deep cleaning rotations.
 
-- **Backend**: Rust (warp + sqlx)
-- **Frontend**: Vanilla JavaScript (no framework)
-- **Database**: SQLite
-- **Embedding**: rust-embed (all static assets compiled into binary)
-- **Testing**: Playwright E2E tests
+**Key Features:**
+- 📅 Daily tasks organized by day of the week
+- 🔄 Deep cleaning queue with automatic rotation
+- 📱 Progressive Web App (PWA) — installable on mobile devices
+- 🌓 Dark/light theme with automatic switching
+- 🔔 Optional push notifications via [ntfy.sh](https://ntfy.sh)
+- 💾 SQLite persistence — all data stored locally
+- 🚀 Self-contained binary (< 15MB) with embedded static assets
 
-## Requirements
+## Quick Start
 
-- Rust 1.70 or higher
-- SQLite 3.x (handled by sqlx)
-- Node.js 18+ (for E2E tests only)
-
-## Installation
-
-### Quick Start
-
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd schweinehund
-   ```
-
-2. Create environment file:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Create database and run migrations:
-   ```bash
-   sqlx database create
-   sqlx migrate run
-   ```
-
-4. Build and run:
-   ```bash
-   cargo run
-   ```
-
-5. Open your browser to: `http://localhost:3000`
-
-### Production Build
+### Using Podman
 
 ```bash
+podman run -d \
+  --name schweinehund \
+  -p 9666:9666 \
+  -v schweinehund-data:/data \
+  -e DATABASE_URL=sqlite:/data/schweinehund.db \
+  ghcr.io/rouhim/schweinehund:latest
+```
+
+Then open: `http://localhost:9666`
+
+### From Source
+
+```bash
+# Clone repository
+git clone https://github.com/RouHim/schweinehund
+cd schweinehund
+
+# Create database
+sqlx database create
+sqlx migrate run
+
+# Run development server
+cargo run
+
+# Or build release binary
 cargo build --release
 ./target/release/schweinehund
 ```
 
-The release binary is fully self-contained (< 15MB) with all static assets embedded.
-
 ## Configuration
 
-Create a `.env` file in the project root:
+Configure via environment variables:
 
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:schweinehund.db` | SQLite database path |
+| `NTFY_TOPIC` | (none) | ntfy.sh topic for push notifications |
+| `NTFY_SERVER` | `https://ntfy.sh` | ntfy.sh server URL |
+| `RUST_LOG` | `info` | Log level (`debug`, `info`, `warn`, `error`) |
+
+**Example `.env` file:**
 ```env
-# Database location
 DATABASE_URL=sqlite:data/schweinehund.db
-
-# Optional: ntfy.sh notifications
-NTFY_TOPIC=your-topic-name
+NTFY_TOPIC=schweinehund-yourname
 NTFY_SERVER=https://ntfy.sh
+RUST_LOG=info
 ```
 
-### Notification Setup (Optional)
-
-Schweinehund supports push notifications via [ntfy.sh](https://ntfy.sh):
+### Setting Up Notifications (Optional)
 
 1. Choose a unique topic name (e.g., `schweinehund-yourname`)
-2. Set environment variables:
-   ```env
-   NTFY_TOPIC=schweinehund-yourname
-   NTFY_SERVER=https://ntfy.sh
-   ```
-3. Install the ntfy mobile app and subscribe to your topic
-4. Enable notifications in the app settings
-
-## Usage
-
-### Daily Tasks
-
-- Check off tasks as you complete them
-- Tasks are organized by day of the week
-- Task states persist across sessions
-- Use the debug reset button to uncheck all tasks (useful for new week)
-
-### Deep Cleaning Queue
-
-- View tasks in priority order
-- Check off a task to mark it complete
-- Completed tasks automatically move to the end of the queue
-- Rotation ensures all areas get cleaned eventually
-
-### Settings
-
-- **Enable Notifications**: Toggle push notifications
-- **Notification Time**: Set preferred reminder time (default: 09:00)
-- **Theme**: Toggle between light and dark mode
+2. Set `NTFY_TOPIC` environment variable
+3. Install the [ntfy mobile app](https://ntfy.sh) and subscribe to your topic
+4. Enable notifications in Schweinehund's settings
 
 ## Development
 
-### Running Tests
+### Prerequisites
 
-The project includes comprehensive E2E tests using Playwright:
+- Rust 1.70 or higher
+- SQLite 3.x (handled by sqlx)
+- Node.js 18+ (for E2E tests)
 
-```bash
-# Install Playwright browsers (first time only)
-cd e2e
-npx playwright install
-
-# Run tests
-npx playwright test
-
-# Run specific test file
-npx playwright test tests/tasks.spec.ts
-
-# Run tests in UI mode
-npx playwright test --ui
-```
-
-### Code Quality
+### Build Commands
 
 ```bash
 # Format code
@@ -141,73 +95,45 @@ cargo fmt
 # Run linter
 cargo clippy -- -D warnings
 
-# Run unit tests (if any)
+# Run unit tests
 cargo test
+
+# Build release binary
+cargo build --release
 ```
 
-### Database Migrations
+### E2E Tests
 
-Migrations are in the `migrations/` directory. To create a new migration:
+The project includes comprehensive Playwright tests:
 
 ```bash
-sqlx migrate add <migration_name>
+cd e2e
+
+# Install Playwright browsers (first time only)
+npx playwright install
+
+# Run all tests
+npx playwright test
+
+# Run specific test file
+npx playwright test tests/crud.spec.ts
+
+# Run with visible browser
+npx playwright test --headed
+
+# Interactive UI mode
+npx playwright test --ui
 ```
 
-## API Endpoints
+## Tech Stack
 
-### Tasks
-
-- `GET /api/health` - Health check
-- `GET /api/tasks/today` - Get today's tasks
-- `POST /api/tasks/:id/toggle` - Toggle task completion
-
-### Deep Cleaning
-
-- `GET /api/deep-cleaning` - Get deep cleaning queue
-- `POST /api/deep-cleaning/:id/complete` - Complete task and rotate
-
-### Settings
-
-- `GET /api/settings` - Get app settings
-- `POST /api/settings` - Update settings
-
-### Debug
-
-- `POST /api/debug/reset` - Reset all daily tasks to unchecked
-- `POST /api/debug/notify` - Test notification
-- `GET /api/debug/notify-status` - Show effective ntfy runtime config (masked topic)
-
-## Project Structure
-
-```
-schweinehund/
-├── src/
-│   ├── main.rs           # Application entry point
-│   ├── db.rs             # Database queries
-│   ├── handlers.rs       # HTTP request handlers
-│   ├── models.rs         # Data models
-│   └── notifications.rs  # ntfy.sh integration
-├── static/
-│   ├── index.html        # Main HTML
-│   ├── app.js            # Application logic
-│   ├── styles.css        # Styling
-│   ├── manifest.json     # PWA manifest
-│   └── sw.js             # Service worker
-├── migrations/
-│   └── 001_initial.sql   # Database schema
-├── e2e/
-│   └── tests/            # E2E test suite
-└── data/                 # Database files (created at runtime)
-```
+- **Backend**: Rust ([warp](https://github.com/seanmonstar/warp) web framework, [sqlx](https://github.com/launchbadge/sqlx) for SQLite)
+- **Frontend**: Vanilla JavaScript (no framework), HTML, CSS
+- **Database**: SQLite with WAL mode
+- **Static Embedding**: [rust-embed](https://github.com/pyrossh/rust-embed) — all assets compiled into binary
+- **Testing**: [Playwright](https://playwright.dev) E2E tests (TypeScript)
+- **Runtime**: [tokio](https://tokio.rs) async runtime
 
 ## License
 
-[Add your license here]
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-If you encounter any issues or have questions, please file an issue on the GitHub repository.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
