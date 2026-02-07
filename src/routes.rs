@@ -208,7 +208,6 @@ async fn handle_complete_deep_task(id: i64, pool: SqlitePool) -> Result<impl Rep
     }))
 }
 
-#[allow(dead_code)]
 fn create_deep_cleaning(
     pool: SqlitePool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -219,7 +218,6 @@ fn create_deep_cleaning(
         .and_then(handle_create_deep_cleaning)
 }
 
-#[allow(dead_code)]
 async fn handle_create_deep_cleaning(
     req: CreateDeepCleaningRequest,
     pool: SqlitePool,
@@ -243,7 +241,6 @@ async fn handle_create_deep_cleaning(
     ))
 }
 
-#[allow(dead_code)]
 fn update_deep_cleaning(
     pool: SqlitePool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -254,7 +251,6 @@ fn update_deep_cleaning(
         .and_then(handle_update_deep_cleaning)
 }
 
-#[allow(dead_code)]
 async fn handle_update_deep_cleaning(
     id: i64,
     req: UpdateDeepCleaningRequest,
@@ -283,7 +279,6 @@ async fn handle_update_deep_cleaning(
     Ok(warp::reply::json(&task))
 }
 
-#[allow(dead_code)]
 fn delete_deep_cleaning(
     pool: SqlitePool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -293,7 +288,6 @@ fn delete_deep_cleaning(
         .and_then(handle_delete_deep_cleaning)
 }
 
-#[allow(dead_code)]
 async fn handle_delete_deep_cleaning(id: i64, pool: SqlitePool) -> Result<impl Reply, Rejection> {
     db::delete_deep_cleaning_task(&pool, id)
         .await
@@ -313,7 +307,6 @@ async fn handle_delete_deep_cleaning(id: i64, pool: SqlitePool) -> Result<impl R
     ))
 }
 
-#[allow(dead_code)]
 fn reorder_deep_cleaning(
     pool: SqlitePool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -324,7 +317,6 @@ fn reorder_deep_cleaning(
         .and_then(handle_reorder_deep_cleaning)
 }
 
-#[allow(dead_code)]
 async fn handle_reorder_deep_cleaning(
     req: ReorderRequest,
     pool: SqlitePool,

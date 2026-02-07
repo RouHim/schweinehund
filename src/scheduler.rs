@@ -34,6 +34,11 @@ async fn execute_reset(pool: &SqlitePool) -> Result<()> {
     let now = chrono::Utc::now().timestamp();
     crate::db::set_last_reset(pool, now).await?;
 
+    // Send daily reminder notification (fire-and-forget)
+    if let Err(e) = crate::notifications::send_daily_reminder(pool).await {
+        tracing::warn!("Failed to send daily reminder: {}", e);
+    }
+
     tracing::info!("Daily reset completed successfully");
     Ok(())
 }

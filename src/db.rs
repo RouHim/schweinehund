@@ -370,7 +370,6 @@ pub async fn delete_daily_task(pool: &SqlitePool, id: i64) -> Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn create_deep_cleaning_task(
     pool: &SqlitePool,
     name: &str,
@@ -415,7 +414,6 @@ pub async fn create_deep_cleaning_task(
     Ok(task)
 }
 
-#[allow(dead_code)]
 pub async fn update_deep_cleaning_task(
     pool: &SqlitePool,
     id: i64,
@@ -451,7 +449,6 @@ pub async fn update_deep_cleaning_task(
     Ok(task)
 }
 
-#[allow(dead_code)]
 pub async fn delete_deep_cleaning_task(pool: &SqlitePool, id: i64) -> Result<()> {
     let deleted_task: (i64,) = sqlx::query_as(
         r#"
@@ -494,7 +491,6 @@ pub async fn delete_deep_cleaning_task(pool: &SqlitePool, id: i64) -> Result<()>
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn reorder_deep_cleaning_queue(
     pool: &SqlitePool,
     order: &[i64],

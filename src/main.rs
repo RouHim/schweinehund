@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     let all_routes = static_files.or(api).recover(routes::handle_rejection);
 
-    let addr: SocketAddr = "127.0.0.1:3000".parse()?;
+    let addr: SocketAddr = "0.0.0.0:9666".parse()?;
     tracing::info!("Starting server on {}", addr);
 
     let (_, server) = warp::serve(all_routes).bind_with_graceful_shutdown(addr, shutdown_signal());

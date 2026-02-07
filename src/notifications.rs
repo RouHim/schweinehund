@@ -124,7 +124,6 @@ impl NtfyClient {
     }
 
     /// Send daily reminder about tasks (with quiet hours check)
-    #[allow(dead_code)]
     pub async fn send_daily_reminder(&self, pool: &SqlitePool) -> Result<()> {
         // Check if notifications are enabled
         let settings = crate::db::get_app_settings(pool).await?;
@@ -187,7 +186,6 @@ pub async fn send_test_notification() -> Result<()> {
 }
 
 /// Send daily reminder (called by scheduler)
-#[allow(dead_code)]
 pub async fn send_daily_reminder(pool: &SqlitePool) -> Result<()> {
     let client = NtfyClient::new();
     client.send_daily_reminder(pool).await?;
