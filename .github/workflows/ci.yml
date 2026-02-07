@@ -161,6 +161,11 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target x86_64-unknown-linux-musl
 
+      - name: Verify binary is statically linked
+        run: |
+          file target/x86_64-unknown-linux-musl/release/schweinehund
+          file target/x86_64-unknown-linux-musl/release/schweinehund | grep -Eq "statically linked|static-pie linked"
+
       - name: Upload musl binary artifact
         uses: actions/upload-artifact@v4
         with:
@@ -198,6 +203,9 @@ jobs:
         run: |
           chmod +x target/x86_64-unknown-linux-musl/release/schweinehund
           file target/x86_64-unknown-linux-musl/release/schweinehund
+          file target/x86_64-unknown-linux-musl/release/schweinehund | grep -Eq "statically linked|static-pie linked"
+          ldd target/x86_64-unknown-linux-musl/release/schweinehund 2>&1 | tee ldd.txt
+          grep -Eq "not a dynamic executable|statically linked" ldd.txt
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -206,7 +214,7 @@ jobs:
         run: |
           podman build -t ghcr.io/rouhim/schweinehund:latest \
             -t ghcr.io/rouhim/schweinehund:${{ needs.create-release.outputs.new_release_version }} \
-            -f Containerfile .
+            -f Containerfile.pipeline .
 
       - name: Push container images
         run: |

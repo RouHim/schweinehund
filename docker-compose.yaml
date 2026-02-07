@@ -2,7 +2,7 @@ services:
   schweinehund:
     image: ghcr.io/rouhim/schweinehund
     build:
-      dockerfile: Containerfile
+      dockerfile: Containerfile.local
       context: .
     user: "1000:1000"
     volumes:

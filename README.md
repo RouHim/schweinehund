@@ -52,6 +52,32 @@ cargo build --release
 ./target/release/schweinehund
 ```
 
+### Building Container Images
+
+This repo has two container build files:
+
+- `Containerfile.local`: developer-friendly image that builds a local musl binary from source using `rust-cross/rust-musl-cross`
+- `Containerfile.pipeline`: CI/release image with a `FROM scratch` final stage that copies in a prebuilt musl binary
+
+Local build example:
+
+```bash
+podman build -f Containerfile.local -t schweinehund:local .
+podman run -d --name schweinehund -p 9666:9666 \
+  -v schweinehund-data:/data \
+  -e DATABASE_URL=sqlite:/data/schweinehund.db \
+  schweinehund:local
+```
+
+CI/release builds use `Containerfile.pipeline` (scratch final image) and expect a prebuilt musl binary at:
+`target/x86_64-unknown-linux-musl/release/schweinehund`.
+
+Compose override example:
+
+```bash
+podman compose -f docker-compose.yaml -f docker-compose.pipeline.yaml build
+```
+
 ## Configuration
 
 Configure via environment variables:

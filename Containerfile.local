@@ -1,0 +1,33 @@
+FROM ghcr.io/rust-cross/rust-musl-cross:x86_64-musl AS builder
+
+WORKDIR /app
+
+COPY Cargo.toml Cargo.lock ./
+COPY migrations ./migrations
+COPY src ./src
+COPY static ./static
+
+RUN cargo build --release --target x86_64-unknown-linux-musl
+
+FROM docker.io/debian:bookworm-slim
+
+ENV DATA_FOLDER="/data"
+ENV RUST_LOG="info"
+
+VOLUME /data
+
+WORKDIR /data
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /data /tmp \
+    && chmod 1777 /tmp \
+    && chown -R 1000:1000 /data /tmp
+
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/schweinehund /schweinehund
+
+EXPOSE 9666
+USER 1000:1000
+
+ENTRYPOINT ["/schweinehund"]

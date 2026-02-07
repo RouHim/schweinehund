@@ -35,6 +35,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # MIME type detection
 mime_guess = "2.0"
 
+[target.'cfg(target_env = "musl")'.dependencies]
+mimalloc = "0.1.43"
+
 [profile.release]
 opt-level = 3
+panic = "abort" # Strip expensive panic clean-up logic
+codegen-units = 1 # Compile crates one after another so the compiler can optimize better
 lto = true
+strip = true # Strip debug symbols
