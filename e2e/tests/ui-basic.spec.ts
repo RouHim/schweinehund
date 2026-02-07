@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Schweinehund UI Basic Tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:3000');
+    await page.goto('/');
   });
 
   test('page loads with Schweinehund title', async ({ page }) => {

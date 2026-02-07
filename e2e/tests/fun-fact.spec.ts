@@ -4,6 +4,9 @@ test.describe('Fun Fact Popup', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible' });
+    await page.evaluate(() => fetch('/api/debug/reset', { method: 'POST' }));
+    await page.reload();
+    await page.waitForSelector('#tasks-list', { state: 'visible' });
   });
 
   test.afterEach(async ({ page }) => {
@@ -70,7 +73,7 @@ test.describe('Fun Fact Popup', () => {
     await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
   });
 
-  test('API failure results in no popup (silent fail)', async ({ page }) => {
+  test('API failure shows fallback message', async ({ page }) => {
     await page.route('https://v2.jokeapi.dev/joke/Any*', (route) => {
       route.abort('failed');
     });
@@ -82,9 +85,8 @@ test.describe('Fun Fact Popup', () => {
       await checkboxes.nth(i).check();
     }
 
-    await page.waitForTimeout(2000);
-
-    await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
+    await expect(page.locator('[data-testid="fun-fact-text"]')).toHaveText('Gut gemacht! 🎉');
   });
 
   test('displays German joke content from JokeAPI', async ({ page }) => {

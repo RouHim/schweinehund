@@ -1,4 +1,25 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+async function createDeepCleaningTask(page: Page, name: string) {
+  await page.locator('[data-testid="add-deep-cleaning-btn"]').click();
+  await expect(page.locator('#task-modal')).toBeVisible();
+  await page.locator('[data-testid="task-name-input"]').fill(name);
+  await page.locator('[data-testid="modal-save-btn"]').click();
+  await expect(page.locator('#task-modal')).not.toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#deep-cleaning-list .task-name', { hasText: name })).toBeVisible();
+}
+
+async function deepTaskNames(page: Page): Promise<string[]> {
+  const names = page.locator('#deep-cleaning-list .task-item .task-name');
+  const count = await names.count();
+  const values: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    values.push((await names.nth(i).textContent()) ?? '');
+  }
+
+  return values;
+}
 
 test.describe('Mobile Viewport Interactions', () => {
   test.beforeEach(async ({ page }) => {
@@ -83,21 +104,30 @@ test.describe('Mobile Viewport Interactions', () => {
 
   test('deep cleaning checkbox works on mobile', async ({ page }) => {
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
-    
-    const deepCleaningList = page.locator('#deep-cleaning-list');
-    const deepCleaningItems = deepCleaningList.locator('.task-item');
-    const count = await deepCleaningItems.count();
-    
-    if (count > 1) {
-      const firstTaskName = await deepCleaningItems.first().locator('.task-name').textContent();
-      
-      const firstCheckbox = deepCleaningItems.first().locator('.task-checkbox');
-      await firstCheckbox.click();
-      await page.waitForTimeout(500);
-      
-      const newFirstTaskName = await deepCleaningItems.first().locator('.task-name').textContent();
-      expect(newFirstTaskName).not.toBe(firstTaskName);
-    }
+
+    const taskA = `Mobile Deep A ${Date.now()}`;
+    const taskB = `Mobile Deep B ${Date.now()}`;
+
+    await createDeepCleaningTask(page, taskA);
+    await createDeepCleaningTask(page, taskB);
+
+    const before = await deepTaskNames(page);
+    expect(before.indexOf(taskA)).toBeLessThan(before.indexOf(taskB));
+
+    const responsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/deep-cleaning/') &&
+        response.url().includes('/complete') &&
+        response.request().method() === 'POST',
+    );
+    await page
+      .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
+      .locator('.task-checkbox')
+      .click();
+    await responsePromise;
+
+    const after = await deepTaskNames(page);
+    expect(after.indexOf(taskB)).toBeLessThan(after.indexOf(taskA));
   });
 
   test('theme toggle works on mobile', async ({ page }) => {

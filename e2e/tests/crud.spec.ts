@@ -28,7 +28,11 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     await page.locator('[data-testid="task-name-input"]').fill(taskName);
     await page.locator('[data-testid="task-desc-input"]').fill('Test description');
     await page.locator('[data-testid="task-zone-input"]').fill('Test Zone');
-    await page.locator('[data-testid="task-day-select"]').selectOption('1'); // Monday
+    const currentDay = await page.evaluate(() => {
+      const jsDay = new Date().getDay();
+      return jsDay === 0 ? '7' : String(jsDay);
+    });
+    await page.locator('[data-testid="task-day-select"]').selectOption(currentDay);
     
     // Submit form
     await page.locator('[data-testid="modal-save-btn"]').click();
@@ -42,7 +46,16 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     // Verify metadata
     const newTaskItem = tasksList.locator('.task-item', { has: page.locator('.task-name', { hasText: taskName }) });
     await expect(newTaskItem.locator('.task-badge', { hasText: 'Test Zone' })).toBeVisible();
-    await expect(newTaskItem.locator('.task-badge', { hasText: 'Monday' })).toBeVisible();
+    const dayNames: Record<string, string> = {
+      '1': 'Monday',
+      '2': 'Tuesday',
+      '3': 'Wednesday',
+      '4': 'Thursday',
+      '5': 'Friday',
+      '6': 'Saturday',
+      '7': 'Sunday',
+    };
+    await expect(newTaskItem.locator('.task-badge', { hasText: dayNames[currentDay] })).toBeVisible();
   });
 
   test('edits a daily task and modal pre-populates', async ({ page }) => {
