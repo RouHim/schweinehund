@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/RouHim/schweinehund/compare/v1.1.4...v1.2.0) (2026-02-08)
+
+
+### Features
+
+* **i18n:** translate entire UI to German ([22ae294](https://github.com/RouHim/schweinehund/commit/22ae2945f0f5617efe0ada3e46cf247cd2704ecd))
+
 ## [1.1.4](https://github.com/RouHim/schweinehund/compare/v1.1.3...v1.1.4) (2026-02-07)
 
 
