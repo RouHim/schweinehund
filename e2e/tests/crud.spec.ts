@@ -47,13 +47,13 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     const newTaskItem = tasksList.locator('.task-item', { has: page.locator('.task-name', { hasText: taskName }) });
     await expect(newTaskItem.locator('.task-badge', { hasText: 'Test Zone' })).toBeVisible();
     const dayNames: Record<string, string> = {
-      '1': 'Monday',
-      '2': 'Tuesday',
-      '3': 'Wednesday',
-      '4': 'Thursday',
-      '5': 'Friday',
-      '6': 'Saturday',
-      '7': 'Sunday',
+      '1': 'Montag',
+      '2': 'Dienstag',
+      '3': 'Mittwoch',
+      '4': 'Donnerstag',
+      '5': 'Freitag',
+      '6': 'Samstag',
+      '7': 'Sonntag',
     };
     await expect(newTaskItem.locator('.task-badge', { hasText: dayNames[currentDay] })).toBeVisible();
   });
@@ -112,7 +112,7 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     
     // Setup dialog handler before clicking delete
     page.on('dialog', dialog => {
-      expect(dialog.message()).toContain('Are you sure you want to delete this task?');
+      expect(dialog.message()).toContain('Möchtest du diese Aufgabe wirklich löschen?');
       dialog.accept();
     });
     
@@ -179,7 +179,7 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     
     // Verify it's in the queue (has queue badge)
     const newTaskItem = deepCleaningList.locator('.task-item', { has: page.locator('.task-name', { hasText: taskName }) });
-    await expect(newTaskItem.locator('.task-badge', { hasText: /Queue #\d+/ })).toBeVisible();
+    await expect(newTaskItem.locator('.task-badge', { hasText: /Platz #\d+/ })).toBeVisible();
   });
 
   test('edits a deep cleaning task and modal pre-populates', async ({ page }) => {
@@ -233,7 +233,7 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     const taskName = await secondTask.locator('.task-name').textContent();
     
     page.on('dialog', dialog => {
-      expect(dialog.message()).toContain('Are you sure you want to delete this task?');
+      expect(dialog.message()).toContain('Möchtest du diese Aufgabe wirklich löschen?');
       dialog.accept();
     });
     

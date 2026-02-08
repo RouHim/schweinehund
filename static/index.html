@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#FF7F66">
-    <meta name="description" content="Daily habit tracker - defeat your inner Schweinehund">
+    <meta name="description" content="Täglicher Putzplan — besiege deinen inneren Schweinehund">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="manifest" href="/manifest.json">
@@ -18,11 +18,11 @@
             <div class="header-content">
                 <div class="title-section">
                     <div class="mascot">
-                        <img src="/icons/mascot.svg" alt="Schweinehund mascot" width="40" height="40">
+                        <img src="/icons/mascot.svg" alt="Schweinehund Maskottchen" width="40" height="40">
                     </div>
                     <h1>Schweinehund</h1>
                 </div>
-                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Design wechseln">
                     <span class="theme-icon">🌙</span>
                 </button>
             </div>
@@ -33,19 +33,19 @@
         <!-- Today's Tasks -->
         <section id="today-section">
             <div class="section-header">
-                <h2>Today's Tasks</h2>
-                <button id="add-daily-task-btn" class="add-btn" data-testid="add-daily-task-btn" aria-label="Add daily task">+ Add</button>
+                <h2>Heutige Aufgaben</h2>
+                <button id="add-daily-task-btn" class="add-btn" data-testid="add-daily-task-btn" aria-label="Tägliche Aufgabe hinzufügen">+ Neu</button>
             </div>
             <div class="progress-container" id="tasks-progress" style="display: none;">
                 <div class="progress-text">
-                    <span class="progress-label">Progress</span>
+                    <span class="progress-label">Fortschritt</span>
                     <span class="progress-count"><span id="tasks-done">0</span> / <span id="tasks-total">0</span></span>
                 </div>
                 <div class="progress-bar-container">
                     <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
                 </div>
             </div>
-            <div id="tasks-loading" class="loading">Loading tasks...</div>
+            <div id="tasks-loading" class="loading">Aufgaben werden geladen...</div>
             <div id="tasks-error" class="error" style="display: none;"></div>
             <ul id="tasks-list" class="task-list" style="display: none;"></ul>
         </section>
@@ -53,32 +53,32 @@
         <!-- Deep Cleaning Queue -->
         <section id="deep-cleaning-section">
             <div class="section-header">
-                <h2>Deep Cleaning Queue</h2>
-                <button id="add-deep-cleaning-btn" class="add-btn" data-testid="add-deep-cleaning-btn" aria-label="Add deep cleaning task">+ Add</button>
+                <h2>Grundreinigung</h2>
+                <button id="add-deep-cleaning-btn" class="add-btn" data-testid="add-deep-cleaning-btn" aria-label="Grundreinigung hinzufügen">+ Neu</button>
             </div>
-            <div id="deep-cleaning-loading" class="loading">Loading deep cleaning tasks...</div>
+            <div id="deep-cleaning-loading" class="loading">Grundreinigung wird geladen...</div>
             <div id="deep-cleaning-error" class="error" style="display: none;"></div>
             <ul id="deep-cleaning-list" class="task-list" style="display: none;"></ul>
         </section>
 
         <!-- Settings -->
         <section id="settings-section">
-            <h2>Settings</h2>
-            <div id="settings-loading" class="loading">Loading settings...</div>
+            <h2>Einstellungen</h2>
+            <div id="settings-loading" class="loading">Einstellungen werden geladen...</div>
             <div id="settings-error" class="error" style="display: none;"></div>
             <form id="settings-form" style="display: none;">
                 <div class="toggle-row">
-                    <label for="notification-enabled">Daily notifications</label>
+                    <label for="notification-enabled">Tägliche Benachrichtigungen</label>
                     <div class="toggle-switch">
                         <input type="checkbox" id="notification-enabled" name="notification_enabled">
                         <span class="toggle-slider"></span>
                     </div>
                 </div>
                 <label for="notification-time">
-                    Notification time
+                    Benachrichtigungszeit
                     <input type="time" id="notification-time" name="notification_time">
                 </label>
-                <button type="submit">Save Settings</button>
+                <button type="submit">Einstellungen speichern</button>
             </form>
         </section>
     </main>
@@ -86,7 +86,7 @@
     <dialog id="task-modal">
         <article>
             <header>
-                <h3 id="modal-title">Add Task</h3>
+                <h3 id="modal-title">Aufgabe hinzufügen</h3>
             </header>
             <form id="task-form">
                 <input type="hidden" name="task-type" id="task-type">
@@ -98,32 +98,32 @@
                 </label>
                 
                 <label>
-                    Description
+                    Beschreibung
                     <textarea name="description" id="task-description" maxlength="1000" data-testid="task-desc-input"></textarea>
                 </label>
                 
                 <label>
-                    Zone
-                    <input type="text" name="zone" id="task-zone" maxlength="100" placeholder="e.g., Kitchen" data-testid="task-zone-input">
+                    Bereich
+                    <input type="text" name="zone" id="task-zone" maxlength="100" placeholder="z.B. Küche" data-testid="task-zone-input">
                 </label>
                 
                 <label id="day-of-week-field">
-                    Day of Week
+                    Wochentag
                     <select name="day_of_week" id="task-day-of-week" data-testid="task-day-select">
-                        <option value="-1">Every day</option>
-                        <option value="1">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                        <option value="7">Sunday</option>
+                        <option value="-1">Jeden Tag</option>
+                        <option value="1">Montag</option>
+                        <option value="2">Dienstag</option>
+                        <option value="3">Mittwoch</option>
+                        <option value="4">Donnerstag</option>
+                        <option value="5">Freitag</option>
+                        <option value="6">Samstag</option>
+                        <option value="7">Sonntag</option>
                     </select>
                 </label>
                 
                 <footer>
-                    <button type="button" class="secondary" data-close-modal data-testid="modal-cancel-btn">Cancel</button>
-                    <button type="submit" data-testid="modal-save-btn">Save</button>
+                    <button type="button" class="secondary" data-close-modal data-testid="modal-cancel-btn">Abbrechen</button>
+                    <button type="submit" data-testid="modal-save-btn">Speichern</button>
                 </footer>
             </form>
         </article>
@@ -133,7 +133,7 @@
         <article>
             <header>
                 <h3>🎉 Alle Aufgaben erledigt!</h3>
-                <button class="close-button" onclick="closeFunFactModal()" data-testid="fun-fact-close-btn" aria-label="Close">×</button>
+                <button class="close-button" onclick="closeFunFactModal()" data-testid="fun-fact-close-btn" aria-label="Schließen">×</button>
             </header>
             <div class="fun-fact-content">
                 <p id="fun-fact-text" data-testid="fun-fact-text"></p>

@@ -11,10 +11,10 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Precaching static assets');
+      console.log('[SW] Statische Assets werden vorgeladen');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => {
-      console.log('[SW] Service Worker installed');
+      console.log('[SW] Service Worker installiert');
       return self.skipWaiting();
     })
   );
@@ -27,14 +27,14 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
+            console.log('[SW] Alter Cache wird gelöscht:', cacheName);
             return caches.delete(cacheName);
           }
           return Promise.resolve();
         })
       );
     }).then(() => {
-      console.log('[SW] Service Worker activated');
+      console.log('[SW] Service Worker aktiviert');
       return self.clients.claim();
     })
   );

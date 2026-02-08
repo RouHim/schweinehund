@@ -1,7 +1,7 @@
 {
   "name": "Schweinehund",
   "short_name": "Schweinehund",
-  "description": "Daily cleaning task manager",
+  "description": "Täglicher Putzplan-Manager",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#FF7F66",

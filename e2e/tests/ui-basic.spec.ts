@@ -22,7 +22,7 @@ test.describe('Schweinehund UI Basic Tests', () => {
     await expect(todaySection).toBeVisible();
     
     const todayHeading = todaySection.locator('h2');
-    await expect(todayHeading).toContainText("Today's Tasks");
+    await expect(todayHeading).toContainText("Heutige Aufgaben");
     
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
     
@@ -55,7 +55,7 @@ test.describe('Schweinehund UI Basic Tests', () => {
     await expect(deepCleaningSection).toBeVisible();
     
     const deepCleaningHeading = deepCleaningSection.locator('h2');
-    await expect(deepCleaningHeading).toContainText('Deep Cleaning Queue');
+    await expect(deepCleaningHeading).toContainText('Grundreinigung');
   });
 
   test('settings section visible', async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('Schweinehund UI Basic Tests', () => {
     await expect(settingsSection).toBeVisible();
     
     const settingsHeading = settingsSection.locator('h2');
-    await expect(settingsHeading).toContainText('Settings');
+    await expect(settingsHeading).toContainText('Einstellungen');
     
     await page.waitForSelector('#settings-form', { state: 'visible', timeout: 5000 });
     

@@ -62,7 +62,7 @@ function openModal(type, task = null) {
     }
     
     if (task) {
-        title.textContent = 'Edit Task';
+        title.textContent = 'Aufgabe bearbeiten';
         idInput.value = task.id;
         nameInput.value = task.name;
         descInput.value = task.description || '';
@@ -71,7 +71,7 @@ function openModal(type, task = null) {
             dayInput.value = task.day_of_week;
         }
     } else {
-        title.textContent = 'Add Task';
+        title.textContent = 'Aufgabe hinzufügen';
         idInput.value = '';
         if (type === 'daily') {
             const today = new Date().getDay();
@@ -129,7 +129,7 @@ async function handleTaskSubmit(event) {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to save task: ${response.statusText}`);
+            throw new Error(`Aufgabe konnte nicht gespeichert werden: ${response.statusText}`);
         }
         
         closeModal();
@@ -141,8 +141,8 @@ async function handleTaskSubmit(event) {
         }
         
     } catch (error) {
-        console.error('Error saving task:', error);
-        alert(`Failed to save task: ${error.message}`);
+        console.error('Fehler beim Speichern der Aufgabe:', error);
+        alert(`Aufgabe konnte nicht gespeichert werden: ${error.message}`);
     }
 }
 
@@ -181,7 +181,7 @@ async function fetchTodayTasks() {
     try {
         const response = await fetch(`${API_BASE}/tasks/today`);
         if (!response.ok) {
-            throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+            throw new Error(`Aufgaben konnten nicht geladen werden: ${response.statusText}`);
         }
         
         const tasks = await response.json();
@@ -193,9 +193,9 @@ async function fetchTodayTasks() {
         
         renderTasks(tasks);
     } catch (error) {
-        console.error('Error fetching tasks:', error);
+        console.error('Fehler beim Laden der Aufgaben:', error);
         loadingEl.style.display = 'none';
-        errorEl.textContent = `Error: ${error.message}`;
+        errorEl.textContent = `Fehler: ${error.message}`;
         errorEl.style.display = 'block';
     }
 }
@@ -210,7 +210,7 @@ const DELETE_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="curre
 </svg>`;
 
 async function deleteTask(type, id) {
-    if (!confirm('Are you sure you want to delete this task?')) {
+    if (!confirm('Möchtest du diese Aufgabe wirklich löschen?')) {
         return;
     }
 
@@ -222,7 +222,7 @@ async function deleteTask(type, id) {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to delete task: ${response.statusText}`);
+            throw new Error(`Aufgabe konnte nicht gelöscht werden: ${response.statusText}`);
         }
 
         if (type === 'daily') {
@@ -231,8 +231,8 @@ async function deleteTask(type, id) {
             await fetchDeepCleaning();
         }
     } catch (error) {
-        console.error('Error deleting task:', error);
-        alert(`Failed to delete task: ${error.message}`);
+        console.error('Fehler beim Löschen der Aufgabe:', error);
+        alert(`Aufgabe konnte nicht gelöscht werden: ${error.message}`);
     }
 }
 
@@ -240,7 +240,7 @@ function renderTasks(tasks) {
     const listEl = document.getElementById('tasks-list');
     
     if (tasks.length === 0) {
-        listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">✨</div><p>No tasks for today — enjoy your free time!</p></li>';
+        listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">✨</div><p>Keine Aufgaben für heute — genieße deine Freizeit!</p></li>';
         updateProgress(0, 0);
         return;
     }
@@ -271,10 +271,10 @@ function renderTasks(tasks) {
                     </div>
                 </label>
                 <div class="task-actions">
-                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Edit task">
+                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
                         ${EDIT_ICON}
                     </button>
-                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Delete task">
+                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Aufgabe löschen">
                         ${DELETE_ICON}
                     </button>
                 </div>
@@ -338,7 +338,7 @@ async function handleTaskToggle(event) {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to toggle task: ${response.statusText}`);
+            throw new Error(`Aufgabe konnte nicht umgeschaltet werden: ${response.statusText}`);
         }
         
         const updatedTask = await response.json();
@@ -354,7 +354,7 @@ async function handleTaskToggle(event) {
         }
         
     } catch (error) {
-        console.error('Error toggling task:', error);
+        console.error('Fehler beim Umschalten der Aufgabe:', error);
         
         checkbox.checked = !isChecked;
         if (isChecked) {
@@ -366,7 +366,7 @@ async function handleTaskToggle(event) {
         const revertedCount = state.tasks.filter(t => t.completed).length;
         updateProgress(revertedCount, state.tasks.length);
         
-        alert(`Failed to update task: ${error.message}`);
+        alert(`Aufgabe konnte nicht aktualisiert werden: ${error.message}`);
     }
 }
 
@@ -378,7 +378,7 @@ async function fetchDeepCleaning() {
     try {
         const response = await fetch(`${API_BASE}/deep-cleaning`);
         if (!response.ok) {
-            throw new Error(`Failed to fetch deep cleaning: ${response.statusText}`);
+            throw new Error(`Grundreinigung konnte nicht geladen werden: ${response.statusText}`);
         }
         
         const tasks = await response.json();
@@ -390,9 +390,9 @@ async function fetchDeepCleaning() {
         
         renderDeepCleaning(tasks);
     } catch (error) {
-        console.error('Error fetching deep cleaning:', error);
+        console.error('Fehler beim Laden der Grundreinigung:', error);
         loadingEl.style.display = 'none';
-        errorEl.textContent = `Error: ${error.message}`;
+        errorEl.textContent = `Fehler: ${error.message}`;
         errorEl.style.display = 'block';
     }
 }
@@ -401,7 +401,7 @@ function renderDeepCleaning(tasks) {
     const listEl = document.getElementById('deep-cleaning-list');
     
     if (tasks.length === 0) {
-        listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">🧹</div><p>No deep cleaning tasks in queue</p></li>';
+        listEl.innerHTML = '<li class="empty-state"><div class="empty-state-icon">🧹</div><p>Keine Grundreinigungen in der Warteschlange</p></li>';
         return;
     }
     
@@ -422,15 +422,15 @@ function renderDeepCleaning(tasks) {
                         <h3 class="task-name">${escapeHtml(task.name)}</h3>
                         ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
                         <div class="task-meta">
-                            <span class="task-badge">Queue #${task.queue_position}</span>
+                            <span class="task-badge">Platz #${task.queue_position}</span>
                         </div>
                     </div>
                 </label>
                 <div class="task-actions">
-                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Edit task">
+                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
                         ${EDIT_ICON}
                     </button>
-                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Delete task">
+                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Aufgabe löschen">
                         ${DELETE_ICON}
                     </button>
                 </div>
@@ -489,18 +489,18 @@ async function handleDeepCleaningToggle(event) {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to complete deep cleaning: ${response.statusText}`);
+            throw new Error(`Grundreinigung konnte nicht abgeschlossen werden: ${response.statusText}`);
         }
         
         await fetchDeepCleaning();
         
     } catch (error) {
-        console.error('Error completing deep cleaning:', error);
+        console.error('Fehler beim Abschließen der Grundreinigung:', error);
         
         checkbox.checked = false;
         taskItem.classList.remove('completed');
         
-        alert(`Failed to complete task: ${error.message}`);
+        alert(`Aufgabe konnte nicht abgeschlossen werden: ${error.message}`);
     }
 }
 
@@ -512,7 +512,7 @@ async function fetchSettings() {
     try {
         const response = await fetch(`${API_BASE}/settings`);
         if (!response.ok) {
-            throw new Error(`Failed to fetch settings: ${response.statusText}`);
+            throw new Error(`Einstellungen konnten nicht geladen werden: ${response.statusText}`);
         }
         
         const settings = await response.json();
@@ -524,9 +524,9 @@ async function fetchSettings() {
         
         populateSettings(settings);
     } catch (error) {
-        console.error('Error fetching settings:', error);
+        console.error('Fehler beim Laden der Einstellungen:', error);
         loadingEl.style.display = 'none';
-        errorEl.textContent = `Error: ${error.message}`;
+        errorEl.textContent = `Fehler: ${error.message}`;
         errorEl.style.display = 'block';
     }
 }
@@ -558,16 +558,16 @@ async function handleSettingsSubmit(event) {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to save settings: ${response.statusText}`);
+            throw new Error(`Einstellungen konnten nicht gespeichert werden: ${response.statusText}`);
         }
         
         const updatedSettings = await response.json();
         state.settings = updatedSettings;
         
-        alert('Settings saved successfully!');
+        alert('Einstellungen erfolgreich gespeichert!');
     } catch (error) {
-        console.error('Error saving settings:', error);
-        alert(`Failed to save settings: ${error.message}`);
+        console.error('Fehler beim Speichern der Einstellungen:', error);
+        alert(`Einstellungen konnten nicht gespeichert werden: ${error.message}`);
     }
 }
 
@@ -578,7 +578,7 @@ function escapeHtml(text) {
 }
 
 function getDayName(dayNumber) {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
     return days[dayNumber - 1] || '';
 }
 
@@ -621,11 +621,11 @@ async function fetchJokeWithTimeout(timeoutMs) {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            throw new Error(`Failed to fetch joke: ${response.statusText}`);
+            throw new Error(`Witz konnte nicht geladen werden: ${response.statusText}`);
         }
         const data = await response.json();
         if (data.error) {
-            throw new Error(data.message || 'No joke found');
+            throw new Error(data.message || 'Kein Witz gefunden');
         }
         return data.joke;
     } catch (error) {
@@ -639,7 +639,7 @@ function showFunFact() {
     const jokeText = document.getElementById('fun-fact-text');
     
     if (!modal || !jokeText) {
-        console.error('Fun fact modal elements not found');
+        console.error('Witz-Modal-Elemente nicht gefunden');
         return;
     }
     
@@ -664,7 +664,7 @@ function showFunFact() {
             }
         })
         .catch(error => {
-            console.error('Failed to fetch joke:', error);
+            console.error('Witz konnte nicht geladen werden:', error);
             if (modal.open) {
                 jokeText.textContent = 'Gut gemacht! 🎉';
             }
@@ -708,10 +708,10 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
             .then(registration => {
-                console.log('[SW] Service Worker registered successfully:', registration);
+                console.log('[SW] Service Worker erfolgreich registriert:', registration);
             })
             .catch(error => {
-                console.error('[SW] Service Worker registration failed:', error);
+                console.error('[SW] Service Worker Registrierung fehlgeschlagen:', error);
             });
     });
 }
