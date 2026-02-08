@@ -1,4 +1,12 @@
 services:
   schweinehund:
+    image: ghcr.io/rouhim/schweinehund
     build:
       dockerfile: Containerfile.pipeline
+      context: .
+    volumes:
+      - ./data:/data
+    environment:
+      - DATABASE_URL=sqlite:/data/schweinehund.db
+    ports:
+      - "9666:9666"

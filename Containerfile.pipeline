@@ -1,33 +1,21 @@
-FROM docker.io/debian:bookworm-slim AS prep
+FROM docker.io/alpine AS prep
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tzdata \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /data /tmp /etc/ssl/certs /usr/share/zoneinfo \
-    && chmod 1777 /tmp \
-    && touch /data/.keep \
-    && chown -R 1000:1000 /data
+# Create an empty directory that will be used in the final image
+RUN mkdir "/empty_dir"
 
 FROM scratch
 
 ENV DATA_FOLDER="/data"
 ENV RUST_LOG="info"
-ENV TZ="UTC"
-ENV SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 
 VOLUME /data
-EXPOSE 9666
-
 WORKDIR /data
 
-COPY --from=prep /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=prep /usr/share/zoneinfo/UTC /usr/share/zoneinfo/UTC
-COPY --from=prep /tmp /tmp
-COPY --from=prep --chown=1000:1000 /data /data
+COPY --from=prep --chown=1000:1000  /empty_dir /tmp
+COPY --from=prep --chown=1000:1000 /empty_dir /data
 
-# CI downloads the musl binary artifact to this path before building
 COPY --chown=1000:1000 target/x86_64-unknown-linux-musl/release/schweinehund /schweinehund
 
+EXPOSE 9666
 USER 1000:1000
 ENTRYPOINT ["/schweinehund"]
