@@ -167,6 +167,8 @@ jobs:
         run: |
           file target/x86_64-unknown-linux-musl/release/schweinehund
           file target/x86_64-unknown-linux-musl/release/schweinehund | grep -Eq "statically linked|static-pie linked"
+          ldd target/x86_64-unknown-linux-musl/release/schweinehund 2>&1 | tee ldd.txt
+          grep -Eq "not a dynamic executable|statically linked" ldd.txt
 
       - name: Upload musl binary artifact
         uses: actions/upload-artifact@v4
