@@ -36,6 +36,8 @@ pub struct DailyTask {
     pub day_of_week: i64,
     pub completed: bool,
     pub completed_at: Option<i64>,
+    pub interval_weeks: i64,
+    pub start_date: Option<String>,
 }
 
 #[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize)]
