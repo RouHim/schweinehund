@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/RouHim/schweinehund/compare/v1.2.0...v1.3.0) (2026-02-09)
+
+
+### Features
+
+* **ui:** replace deep cleaning checkbox with 'Erledigt' rotation button ([ad2e3e7](https://github.com/RouHim/schweinehund/commit/ad2e3e7db32ba3e5ce5162578c0f8665243b3be6))
+
 # [1.2.0](https://github.com/RouHim/schweinehund/compare/v1.1.4...v1.2.0) (2026-02-08)
 
 
