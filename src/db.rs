@@ -74,6 +74,23 @@ pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<
     Ok(tasks)
 }
 
+/// Get all daily tasks (both mini-routines and regular weekday tasks)
+pub async fn get_all_daily_tasks(pool: &SqlitePool) -> Result<(Vec<DailyTask>, Vec<DeepCleaningTask>)> {
+    let daily_tasks = sqlx::query_as::<_, DailyTask>(
+        r#"
+        SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
+        FROM daily_tasks
+        ORDER BY day_of_week, id
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let deep_cleaning_tasks = get_deep_cleaning_queue(pool).await?;
+
+    Ok((daily_tasks, deep_cleaning_tasks))
+}
+
 /// Get all deep cleaning tasks ordered by queue position
 pub async fn get_deep_cleaning_queue(pool: &SqlitePool) -> Result<Vec<DeepCleaningTask>> {
     let tasks = sqlx::query_as::<_, DeepCleaningTask>(
@@ -936,6 +953,48 @@ pub mod tests {
 
         assert_eq!(task.interval_weeks, 1);
         assert_eq!(task.start_date, Some("2026-02-09".to_string()));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_all_tasks_returns_both_types() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let (daily, deep) = get_all_daily_tasks(&pool).await?;
+        
+        assert!(daily.len() > 0, "Should return daily tasks");
+        assert!(deep.len() > 0, "Should return deep cleaning tasks");
+        assert_eq!(deep.len(), 4, "Should have 4 deep cleaning tasks");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_all_tasks_returns_all_daily() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let (daily, _) = get_all_daily_tasks(&pool).await?;
+        
+        // Should include mini-routines (-1) and all day_of_week values (1-7)
+        let mini_routine_count = daily.iter().filter(|t| t.day_of_week == -1).count();
+        assert_eq!(mini_routine_count, 5, "Should include 5 mini-routine tasks");
+        
+        // Should have at least some regular tasks
+        let regular_count = daily.iter().filter(|t| t.day_of_week >= 1 && t.day_of_week <= 7).count();
+        assert!(regular_count > 0, "Should include regular weekday tasks");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_all_tasks_includes_mini_routines() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let (daily, _) = get_all_daily_tasks(&pool).await?;
+        
+        let has_mini_routine = daily.iter().any(|t| t.day_of_week == -1);
+        assert!(has_mini_routine, "Should include mini-routine tasks (day_of_week = -1)");
 
         Ok(())
     }

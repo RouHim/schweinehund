@@ -6,6 +6,12 @@ use warp::{http::StatusCode, reject, Filter, Rejection, Reply};
 
 use crate::{db, notifications};
 
+#[derive(Serialize)]
+struct AllTasksResponse {
+    daily_tasks: Vec<db::DailyTask>,
+    deep_cleaning_tasks: Vec<db::DeepCleaningTask>,
+}
+
 #[derive(Debug)]
 struct DatabaseError;
 impl reject::Reject for DatabaseError {}
@@ -85,6 +91,7 @@ pub fn api_routes(
 
     health()
         .or(get_today_tasks(pool.clone()))
+        .or(get_all_tasks(pool.clone()))
         .or(toggle_task(pool.clone()))
         .or(get_deep_cleaning(pool.clone()))
         .or(complete_deep_task(pool.clone()))
@@ -119,6 +126,15 @@ fn get_today_tasks(
         .and_then(handle_get_today_tasks)
 }
 
+fn get_all_tasks(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "tasks" / "all")
+        .and(warp::get())
+        .and(with_db(pool))
+        .and_then(handle_get_all_tasks)
+}
+
 async fn handle_get_today_tasks(
     params: std::collections::HashMap<String, String>,
     pool: SqlitePool,
@@ -135,6 +151,17 @@ async fn handle_get_today_tasks(
         .map_err(|_| reject::custom(DatabaseError))?;
 
     Ok(warp::reply::json(&tasks))
+}
+
+async fn handle_get_all_tasks(pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    let (daily_tasks, deep_cleaning_tasks) = db::get_all_daily_tasks(&pool)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&AllTasksResponse {
+        daily_tasks,
+        deep_cleaning_tasks,
+    }))
 }
 
 fn toggle_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
