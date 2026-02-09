@@ -1,5 +1,7 @@
 const API_BASE = '/api';
 
+let deepCleaningSortable = null;
+
 function initModal() {
     const modal = document.getElementById('task-modal');
     const form = document.getElementById('task-form');
@@ -408,12 +410,21 @@ function renderDeepCleaning(tasks) {
     listEl.innerHTML = tasks.map((task, index) => {
         return `
             <li class="task-item" data-deep-cleaning-id="${task.id}">
+                <button class="drag-handle" data-testid="drag-handle" aria-label="Aufgabe verschieben" tabindex="-1">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <circle cx="5" cy="3" r="1.5"/><circle cx="11" cy="3" r="1.5"/>
+                        <circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/>
+                        <circle cx="5" cy="13" r="1.5"/><circle cx="11" cy="13" r="1.5"/>
+                    </svg>
+                </button>
                 <div class="deep-cleaning-position">#${index + 1}</div>
                 <div class="task-content">
                     <h3 class="task-name">${escapeHtml(task.name)}</h3>
                     ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
                 </div>
                 <div class="task-actions">
+                    <button data-testid="move-up-btn" data-task-id="${task.id}" class="icon-btn move-btn move-up-btn" aria-label="Nach oben verschieben" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button data-testid="move-down-btn" data-task-id="${task.id}" class="icon-btn move-btn move-down-btn" aria-label="Nach unten verschieben" ${index === tasks.length - 1 ? 'disabled' : ''}>↓</button>
                     <button data-testid="complete-btn" data-task-id="${task.id}" class="complete-btn" aria-label="Aufgabe erledigen">Erledigt</button>
                     <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
                         ${EDIT_ICON}
@@ -427,6 +438,31 @@ function renderDeepCleaning(tasks) {
     }).join('');
     
     attachDeepCleaningListeners();
+    
+    // Destroy previous Sortable instance
+    if (deepCleaningSortable) {
+        deepCleaningSortable.destroy();
+        deepCleaningSortable = null;
+    }
+    
+    // Only init when 2+ tasks
+    if (tasks.length >= 2) {
+        deepCleaningSortable = Sortable.create(listEl, {
+            handle: '.drag-handle',
+            animation: 150,
+            forceFallback: true,
+            touchStartThreshold: 3,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            dataIdAttr: 'data-deep-cleaning-id',
+            filter: '.empty-state',
+            onEnd: function(evt) {
+                if (evt.oldIndex === evt.newIndex) return;
+                handleDragReorder();
+            }
+        });
+    }
 }
 
 function attachDeepCleaningListeners() {
@@ -456,6 +492,22 @@ function attachDeepCleaningListeners() {
             deleteTask('deep-cleaning', id);
         });
     });
+
+    listEl.querySelectorAll('.move-up-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const taskId = parseInt(btn.dataset.taskId);
+            await handleArrowMove(taskId, 'up');
+        });
+    });
+
+    listEl.querySelectorAll('.move-down-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const taskId = parseInt(btn.dataset.taskId);
+            await handleArrowMove(taskId, 'down');
+        });
+    });
 }
 
 async function handleDeepCleaningComplete(taskId, btn) {
@@ -483,6 +535,64 @@ async function handleDeepCleaningComplete(taskId, btn) {
         btn.textContent = 'Erledigt';
         
         alert(`Aufgabe konnte nicht abgeschlossen werden: ${error.message}`);
+    }
+}
+
+async function handleDragReorder() {
+    const listEl = document.getElementById('deep-cleaning-list');
+    const newOrder = Array.from(listEl.querySelectorAll('.task-item'))
+        .map(li => parseInt(li.dataset.deepCleaningId));
+    
+    try {
+        const response = await fetch(`${API_BASE}/deep-cleaning/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: newOrder })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Reorder failed: ${response.statusText}`);
+        }
+        
+        const updated = await response.json();
+        state.deepCleaning = updated;
+        renderDeepCleaning(state.deepCleaning);
+        
+    } catch (error) {
+        console.error('Reorder error:', error);
+        renderDeepCleaning(state.deepCleaning);
+    }
+}
+
+async function handleArrowMove(taskId, direction) {
+    const currentIdx = state.deepCleaning.findIndex(t => t.id === taskId);
+    if (currentIdx === -1) return;
+    
+    const swapIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+    if (swapIdx < 0 || swapIdx >= state.deepCleaning.length) return;
+    
+    document.querySelectorAll('.move-btn').forEach(btn => btn.disabled = true);
+    
+    const newOrder = [...state.deepCleaning];
+    [newOrder[currentIdx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[currentIdx]];
+    const orderIds = newOrder.map(t => t.id);
+    
+    try {
+        const response = await fetch(`${API_BASE}/deep-cleaning/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: orderIds })
+        });
+        
+        if (!response.ok) throw new Error(`Reorder failed: ${response.statusText}`);
+        
+        const updated = await response.json();
+        state.deepCleaning = updated;
+        renderDeepCleaning(state.deepCleaning);
+        
+    } catch (error) {
+        console.error('Arrow move error:', error);
+        renderDeepCleaning(state.deepCleaning);
     }
 }
 

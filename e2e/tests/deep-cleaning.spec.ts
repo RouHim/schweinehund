@@ -108,4 +108,117 @@ test.describe('Deep Cleaning Queue', () => {
     
     expect(afterReloadState).toEqual(beforeReloadState);
   });
+
+  test.describe('Reordering', () => {
+    test('grip handle is visible on each task', async ({ page }) => {
+      const taskCount = await page.locator('#deep-cleaning-list .task-item').count();
+      if (taskCount === 0) {
+        await createDeepCleaningTask(page, `Grip Test ${Date.now()}`);
+      }
+      
+      const handles = page.locator('[data-testid="drag-handle"]');
+      const handleCount = await handles.count();
+      expect(handleCount).toBeGreaterThan(0);
+      
+      const firstHandle = handles.first();
+      const box = await firstHandle.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    });
+
+    test('arrow buttons reorder tasks', async ({ page }) => {
+      const taskA = `Arrow A ${Date.now()}`;
+      const taskB = `Arrow B ${Date.now()}`;
+      const taskC = `Arrow C ${Date.now()}`;
+      
+      await createDeepCleaningTask(page, taskA);
+      await createDeepCleaningTask(page, taskB);
+      await createDeepCleaningTask(page, taskC);
+      
+      const before = await taskNames(page);
+      expect(before.indexOf(taskA)).toBeLessThan(before.indexOf(taskB));
+      
+      const responsePromise = page.waitForResponse(r => r.url().includes('/api/deep-cleaning/reorder'));
+      await page
+        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
+        .locator('[data-testid="move-down-btn"]')
+        .click();
+      await responsePromise;
+      
+      const after = await taskNames(page);
+      expect(after.indexOf(taskB)).toBeLessThan(after.indexOf(taskA));
+      
+      const positions = await page.locator('.deep-cleaning-position').allTextContents();
+      expect(positions).toEqual(['#1', '#2', '#3']);
+    });
+
+    test('first item move-up is disabled, last item move-down is disabled', async ({ page }) => {
+      const taskCount = await page.locator('#deep-cleaning-list .task-item').count();
+      if (taskCount < 2) {
+        await createDeepCleaningTask(page, `Disabled A ${Date.now()}`);
+        await createDeepCleaningTask(page, `Disabled B ${Date.now()}`);
+      }
+      
+      const firstMoveUp = page.locator('#deep-cleaning-list .task-item').first().locator('[data-testid="move-up-btn"]');
+      await expect(firstMoveUp).toBeDisabled();
+      
+      const lastMoveDown = page.locator('#deep-cleaning-list .task-item').last().locator('[data-testid="move-down-btn"]');
+      await expect(lastMoveDown).toBeDisabled();
+    });
+
+    test('reorder persists after page reload', async ({ page }) => {
+      const taskA = `Persist A ${Date.now()}`;
+      const taskB = `Persist B ${Date.now()}`;
+      
+      await createDeepCleaningTask(page, taskA);
+      await createDeepCleaningTask(page, taskB);
+      
+      const responsePromise = page.waitForResponse(r => r.url().includes('/api/deep-cleaning/reorder'));
+      await page
+        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
+        .locator('[data-testid="move-down-btn"]')
+        .click();
+      await responsePromise;
+      
+      const afterReorder = await taskNames(page);
+      expect(afterReorder.indexOf(taskB)).toBeLessThan(afterReorder.indexOf(taskA));
+      
+      await page.reload();
+      await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
+      
+      const afterReload = await taskNames(page);
+      expect(afterReload.indexOf(taskB)).toBeLessThan(afterReload.indexOf(taskA));
+    });
+
+    test('drag-and-drop reorders tasks', async ({ page }) => {
+      const taskA = `Drag A ${Date.now()}`;
+      const taskB = `Drag B ${Date.now()}`;
+      const taskC = `Drag C ${Date.now()}`;
+      
+      await createDeepCleaningTask(page, taskA);
+      await createDeepCleaningTask(page, taskB);
+      await createDeepCleaningTask(page, taskC);
+      
+      const before = await taskNames(page);
+      const cIdx = before.indexOf(taskC);
+      const aIdx = before.indexOf(taskA);
+      expect(cIdx).toBeGreaterThan(aIdx);
+      
+      const responsePromise = page.waitForResponse(r => r.url().includes('/api/deep-cleaning/reorder'));
+      
+      const handleC = page
+        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskC }) })
+        .locator('[data-testid="drag-handle"]');
+      const handleA = page
+        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
+        .locator('[data-testid="drag-handle"]');
+      
+      await handleC.dragTo(handleA);
+      await responsePromise;
+      
+      const after = await taskNames(page);
+      expect(after.indexOf(taskC)).toBeLessThan(after.indexOf(taskA));
+    });
+  });
 });

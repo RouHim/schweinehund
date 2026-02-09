@@ -467,6 +467,63 @@ section {
     letter-spacing: 0.02em;
 }
 
+/* --- Drag Handle --- */
+.drag-handle {
+    cursor: grab;
+    padding: 0.5rem;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    flex-shrink: 0;
+    opacity: 0.4;
+    transition: opacity var(--transition);
+    align-self: center;
+    margin-left: -0.5rem;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+    color: var(--primary);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* --- Move Buttons --- */
+.move-btn {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.move-btn:disabled {
+    opacity: 0.15;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* --- Sortable Drag States --- */
+.sortable-ghost {
+    opacity: 0.3;
+    background: var(--primary-faint);
+}
+
+.sortable-chosen {
+    box-shadow: 0 4px 16px var(--shadow-lg);
+}
+
+.sortable-drag {
+    cursor: grabbing !important;
+}
+
 /* --- Complete Button (Deep Cleaning) --- */
 .complete-btn {
     background: var(--success-light);
