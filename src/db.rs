@@ -59,6 +59,15 @@ pub struct AppSettings {
 
 /// Get tasks for today: mini-routine (day_of_week = -1) + today's zone tasks
 pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<DailyTask>> {
+    let current_date = chrono::Local::now().date_naive();
+    get_today_tasks_for_date(pool, day_of_week, current_date).await
+}
+
+async fn get_today_tasks_for_date(
+    pool: &SqlitePool,
+    day_of_week: i64,
+    current_date: chrono::NaiveDate,
+) -> Result<Vec<DailyTask>> {
     let tasks = sqlx::query_as::<_, DailyTask>(
         r#"
         SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
@@ -71,7 +80,25 @@ pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<
     .fetch_all(pool)
     .await?;
 
-    Ok(tasks)
+    let filtered_tasks = tasks
+        .into_iter()
+        .filter(|task| {
+            if task.day_of_week == -1 {
+                return true;
+            }
+
+            if task.interval_weeks <= 1 {
+                return true;
+            }
+
+            match task.start_date.as_deref() {
+                Some(start_date) => is_due_this_week(start_date, task.interval_weeks, current_date),
+                None => true,
+            }
+        })
+        .collect();
+
+    Ok(filtered_tasks)
 }
 
 /// Get all daily tasks (both mini-routines and regular weekday tasks)
@@ -640,6 +667,129 @@ pub mod tests {
 
         let mini_routine_count = tasks.iter().filter(|t| t.day_of_week == -1).count();
         assert_eq!(mini_routine_count, 5, "Should have 5 mini-routine tasks");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_today_tasks_weekly_shows_on_correct_day() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Weekly monday",
+            None,
+            None,
+            1,
+            1,
+            "2026-01-05",
+        )
+        .await?;
+
+        let monday = chrono::NaiveDate::from_ymd_opt(2026, 1, 12).unwrap();
+        let monday_tasks = get_today_tasks_for_date(&pool, 1, monday).await?;
+        assert!(monday_tasks.iter().any(|t| t.id == task.id));
+
+        let tuesday_tasks = get_today_tasks_for_date(&pool, 2, monday).await?;
+        assert!(!tuesday_tasks.iter().any(|t| t.id == task.id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_today_tasks_biweekly_shows_on_due_week() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Biweekly due",
+            None,
+            None,
+            1,
+            2,
+            "2026-01-05",
+        )
+        .await?;
+
+        let due_week = chrono::NaiveDate::from_ymd_opt(2026, 1, 19).unwrap();
+        let tasks = get_today_tasks_for_date(&pool, 1, due_week).await?;
+
+        assert!(tasks.iter().any(|t| t.id == task.id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_today_tasks_biweekly_hides_on_skip_week() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Biweekly skip",
+            None,
+            None,
+            1,
+            2,
+            "2026-01-05",
+        )
+        .await?;
+
+        let skip_week = chrono::NaiveDate::from_ymd_opt(2026, 1, 12).unwrap();
+        let tasks = get_today_tasks_for_date(&pool, 1, skip_week).await?;
+
+        assert!(!tasks.iter().any(|t| t.id == task.id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_today_tasks_mini_routine_always_shows() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let result = sqlx::query(
+            r#"
+            INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+            VALUES (?, NULL, NULL, -1, 0, NULL, 4, NULL)
+            "#,
+        )
+        .bind("Mini routine always")
+        .execute(&pool)
+        .await?;
+        let task_id = result.last_insert_rowid();
+
+        let monday = chrono::NaiveDate::from_ymd_opt(2026, 1, 12).unwrap();
+        let monday_tasks = get_today_tasks_for_date(&pool, 1, monday).await?;
+        assert!(monday_tasks.iter().any(|t| t.id == task_id));
+
+        let sunday = chrono::NaiveDate::from_ymd_opt(2026, 1, 18).unwrap();
+        let sunday_tasks = get_today_tasks_for_date(&pool, 7, sunday).await?;
+        assert!(sunday_tasks.iter().any(|t| t.id == task_id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_today_tasks_year_boundary() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Biweekly year boundary",
+            None,
+            None,
+            1,
+            2,
+            "2020-12-28",
+        )
+        .await?;
+
+        let skip_week = chrono::NaiveDate::from_ymd_opt(2021, 1, 4).unwrap();
+        let skip_tasks = get_today_tasks_for_date(&pool, 1, skip_week).await?;
+        assert!(!skip_tasks.iter().any(|t| t.id == task.id));
+
+        let due_week = chrono::NaiveDate::from_ymd_opt(2021, 1, 11).unwrap();
+        let due_tasks = get_today_tasks_for_date(&pool, 1, due_week).await?;
+        assert!(due_tasks.iter().any(|t| t.id == task.id));
 
         Ok(())
     }
