@@ -38,7 +38,7 @@ test.describe('Deep Cleaning Queue', () => {
     
     const firstItem = deepCleaningItems.first();
     await expect(firstItem.locator('.task-name')).toBeVisible();
-    await expect(firstItem.locator('.task-checkbox')).toBeVisible();
+    await expect(firstItem.locator('[data-testid="complete-btn"]')).toBeVisible();
   });
 
   test('completes deep cleaning task and rotates queue', async ({ page }) => {
@@ -59,7 +59,7 @@ test.describe('Deep Cleaning Queue', () => {
     );
     await page
       .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
-      .locator('.task-checkbox')
+      .locator('[data-testid="complete-btn"]')
       .click();
     await responsePromise;
 
@@ -82,7 +82,7 @@ test.describe('Deep Cleaning Queue', () => {
     );
     await page
       .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
-      .locator('.task-checkbox')
+      .locator('[data-testid="complete-btn"]')
       .click();
     await responsePromise;
 

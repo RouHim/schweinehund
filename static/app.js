@@ -405,28 +405,16 @@ function renderDeepCleaning(tasks) {
         return;
     }
     
-    listEl.innerHTML = tasks.map(task => {
-        const completed = !!task.completed_at;
-        const completedClass = completed ? 'completed' : '';
-        
+    listEl.innerHTML = tasks.map((task, index) => {
         return `
-            <li class="task-item ${completedClass}" data-deep-cleaning-id="${task.id}">
-                <label class="task-checkbox-wrapper">
-                    <input 
-                        type="checkbox" 
-                        class="task-checkbox" 
-                        data-deep-cleaning-id="${task.id}"
-                        ${completed ? 'checked' : ''}
-                    >
-                    <div class="task-content">
-                        <h3 class="task-name">${escapeHtml(task.name)}</h3>
-                        ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
-                        <div class="task-meta">
-                            <span class="task-badge">Platz #${task.queue_position}</span>
-                        </div>
-                    </div>
-                </label>
+            <li class="task-item" data-deep-cleaning-id="${task.id}">
+                <div class="deep-cleaning-position">#${index + 1}</div>
+                <div class="task-content">
+                    <h3 class="task-name">${escapeHtml(task.name)}</h3>
+                    ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
+                </div>
                 <div class="task-actions">
+                    <button data-testid="complete-btn" data-task-id="${task.id}" class="complete-btn" aria-label="Aufgabe erledigen">Erledigt</button>
                     <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
                         ${EDIT_ICON}
                     </button>
@@ -443,10 +431,13 @@ function renderDeepCleaning(tasks) {
 
 function attachDeepCleaningListeners() {
     const listEl = document.getElementById('deep-cleaning-list');
-    const checkboxes = listEl.querySelectorAll('.task-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleDeepCleaningToggle);
+
+    listEl.querySelectorAll('.complete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const taskId = btn.dataset.taskId;
+            handleDeepCleaningComplete(taskId, btn);
+        });
     });
 
     listEl.querySelectorAll('.edit-btn').forEach(btn => {
@@ -467,18 +458,9 @@ function attachDeepCleaningListeners() {
     });
 }
 
-async function handleDeepCleaningToggle(event) {
-    const checkbox = event.target;
-    const taskId = checkbox.dataset.deepCleaningId;
-    const isChecked = checkbox.checked;
-    
-    if (!isChecked) {
-        checkbox.checked = true;
-        return;
-    }
-    
-    const taskItem = checkbox.closest('.task-item');
-    taskItem.classList.add('completed');
+async function handleDeepCleaningComplete(taskId, btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
     
     try {
         const response = await fetch(`${API_BASE}/deep-cleaning/${taskId}/complete`, {
@@ -497,8 +479,8 @@ async function handleDeepCleaningToggle(event) {
     } catch (error) {
         console.error('Fehler beim Abschließen der Grundreinigung:', error);
         
-        checkbox.checked = false;
-        taskItem.classList.remove('completed');
+        btn.disabled = false;
+        btn.textContent = 'Erledigt';
         
         alert(`Aufgabe konnte nicht abgeschlossen werden: ${error.message}`);
     }

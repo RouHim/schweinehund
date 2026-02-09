@@ -450,6 +450,57 @@ section {
     background-color: rgba(244, 67, 54, 0.08);
 }
 
+/* --- Deep Cleaning Queue Position --- */
+.deep-cleaning-position {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-faint);
+    border-radius: var(--radius-sm);
+    margin: 2px 0.75rem 0 0;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+}
+
+/* --- Complete Button (Deep Cleaning) --- */
+.complete-btn {
+    background: var(--success-light);
+    color: var(--success);
+    border: 1px solid var(--success);
+    border-radius: var(--radius-pill);
+    padding: 0.35rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    min-height: 32px;
+    flex-shrink: 0;
+}
+
+.complete-btn:hover {
+    background: var(--success);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.complete-btn:active {
+    transform: scale(0.95);
+}
+
+.complete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 /* --- Empty State --- */
 .empty-state {
     text-align: center;

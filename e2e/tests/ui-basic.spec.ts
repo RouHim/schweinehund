@@ -31,9 +31,9 @@ test.describe('Schweinehund UI Basic Tests', () => {
   });
 
   test('checkbox interaction works', async ({ page }) => {
-    await page.waitForSelector('.task-checkbox', { state: 'visible', timeout: 5000 });
+    await page.waitForSelector('#tasks-list .task-checkbox', { state: 'visible', timeout: 5000 });
     
-    const firstCheckbox = page.locator('.task-checkbox').first();
+    const firstCheckbox = page.locator('#tasks-list .task-checkbox').first();
     await expect(firstCheckbox).toBeVisible();
     
     const isInitiallyChecked = await firstCheckbox.isChecked();

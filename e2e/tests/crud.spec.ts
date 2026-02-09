@@ -179,7 +179,7 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     
     // Verify it's in the queue (has queue badge)
     const newTaskItem = deepCleaningList.locator('.task-item', { has: page.locator('.task-name', { hasText: taskName }) });
-    await expect(newTaskItem.locator('.task-badge', { hasText: /Platz #\d+/ })).toBeVisible();
+    await expect(newTaskItem.locator('.deep-cleaning-position')).toBeVisible();
   });
 
   test('edits a deep cleaning task and modal pre-populates', async ({ page }) => {

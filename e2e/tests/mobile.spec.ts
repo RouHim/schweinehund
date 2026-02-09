@@ -55,16 +55,16 @@ test.describe('Mobile Viewport Interactions', () => {
     }
   });
 
-  test('deep cleaning checkboxes are touch-friendly', async ({ page }) => {
+  test('deep cleaning complete buttons are touch-friendly', async ({ page }) => {
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
     
     const deepCleaningList = page.locator('#deep-cleaning-list');
-    const deepCheckboxes = deepCleaningList.locator('.task-checkbox');
-    const count = await deepCheckboxes.count();
+    const completeBtns = deepCleaningList.locator('[data-testid="complete-btn"]');
+    const count = await completeBtns.count();
     
     if (count > 0) {
-      const firstCheckbox = deepCheckboxes.first();
-      const boundingBox = await firstCheckbox.boundingBox();
+      const firstBtn = completeBtns.first();
+      const boundingBox = await firstBtn.boundingBox();
       
       expect(boundingBox).not.toBeNull();
       
@@ -102,7 +102,7 @@ test.describe('Mobile Viewport Interactions', () => {
     expect(isNowChecked).toBe(!wasChecked);
   });
 
-  test('deep cleaning checkbox works on mobile', async ({ page }) => {
+  test('deep cleaning complete button works on mobile', async ({ page }) => {
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
 
     const taskA = `Mobile Deep A ${Date.now()}`;
@@ -122,7 +122,7 @@ test.describe('Mobile Viewport Interactions', () => {
     );
     await page
       .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
-      .locator('.task-checkbox')
+      .locator('[data-testid="complete-btn"]')
       .click();
     await responsePromise;
 
