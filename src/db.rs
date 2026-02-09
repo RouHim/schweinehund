@@ -60,7 +60,7 @@ pub struct AppSettings {
 pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<DailyTask>> {
     let tasks = sqlx::query_as::<_, DailyTask>(
         r#"
-        SELECT id, name, description, zone, day_of_week, completed, completed_at
+        SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
         FROM daily_tasks
         WHERE day_of_week = -1 OR day_of_week = ?
         ORDER BY day_of_week, id
@@ -303,7 +303,7 @@ pub async fn create_daily_task(
 
     let task = sqlx::query_as::<_, DailyTask>(
         r#"
-        SELECT id, name, description, zone, day_of_week, completed, completed_at
+        SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
         FROM daily_tasks
         WHERE id = ?
         "#,
@@ -341,7 +341,7 @@ pub async fn update_daily_task(
 
     let task = sqlx::query_as::<_, DailyTask>(
         r#"
-        SELECT id, name, description, zone, day_of_week, completed, completed_at
+        SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
         FROM daily_tasks
         WHERE id = ?
         "#,
