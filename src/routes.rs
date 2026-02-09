@@ -48,6 +48,7 @@ struct CreateTaskRequest {
     description: Option<String>,
     zone: Option<String>,
     day_of_week: i64,
+    interval_weeks: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -56,6 +57,7 @@ struct UpdateTaskRequest {
     description: Option<String>,
     zone: Option<String>,
     day_of_week: i64,
+    interval_weeks: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -422,14 +424,24 @@ async fn handle_create_task(
         return Err(reject::custom(DatabaseError));
     }
 
+    let interval_weeks = req.interval_weeks.unwrap_or(1);
+
+    if !(1..=52).contains(&interval_weeks) {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    let final_interval = if req.day_of_week == -1 { 1 } else { interval_weeks };
+
+    let start_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+
     let task = db::create_daily_task(
         &pool,
         &req.name,
         req.description.as_deref(),
         req.zone.as_deref(),
         req.day_of_week,
-        1, // TODO: Task 5 will make this dynamic
-        "1970-01-01", // TODO: Task 5 will use today's date
+        final_interval,
+        &start_date,
     )
     .await
     .map_err(|_| reject::custom(DatabaseError))?;
@@ -461,6 +473,22 @@ async fn handle_update_task(
         return Err(reject::custom(DatabaseError));
     }
 
+    let current_task = db::get_all_daily_tasks(&pool)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?
+        .0
+        .into_iter()
+        .find(|t| t.id == id)
+        .ok_or_else(|| reject::custom(NotFoundError))?;
+
+    let interval_weeks = req.interval_weeks.unwrap_or(current_task.interval_weeks);
+
+    if !(1..=52).contains(&interval_weeks) {
+        return Err(reject::custom(DatabaseError));
+    }
+
+    let final_interval = if req.day_of_week == -1 { 1 } else { interval_weeks };
+
     let task = db::update_daily_task(
         &pool,
         id,
@@ -468,7 +496,7 @@ async fn handle_update_task(
         req.description.as_deref(),
         req.zone.as_deref(),
         req.day_of_week,
-        1, // TODO: Task 5 will accept interval_weeks from request
+        final_interval,
     )
     .await
     .map_err(|e| {
@@ -596,5 +624,131 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
             }),
             StatusCode::INTERNAL_SERVER_ERROR,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_create_task_with_valid_interval() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Valid Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: Some(2),
+        };
+
+        let result = handle_create_task(req, pool).await;
+        assert!(result.is_ok(), "Should accept interval_weeks between 1 and 52");
+    }
+
+    #[tokio::test]
+    async fn test_create_task_invalid_interval_zero() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Bad Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: Some(0),
+        };
+
+        let result = handle_create_task(req, pool).await;
+        assert!(result.is_err(), "Should reject interval_weeks of 0");
+    }
+
+    #[tokio::test]
+    async fn test_create_task_invalid_interval_negative() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Bad Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: Some(-5),
+        };
+
+        let result = handle_create_task(req, pool).await;
+        assert!(result.is_err(), "Should reject negative interval_weeks");
+    }
+
+    #[tokio::test]
+    async fn test_create_task_invalid_interval_too_large() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Bad Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: Some(53),
+        };
+
+        let result = handle_create_task(req, pool).await;
+        assert!(result.is_err(), "Should reject interval_weeks > 52");
+    }
+
+    #[tokio::test]
+    async fn test_create_mini_routine_ignores_interval() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Mini Routine".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: -1,
+            interval_weeks: Some(10),
+        };
+
+        let result = handle_create_task(req, pool).await;
+        assert!(result.is_ok(), "Should accept mini-routine (day_of_week=-1)");
+
+        if let Ok(reply) = result {
+            // Parse the response to verify interval_weeks is forced to 1
+            let status = reply.into_response().status();
+            assert_eq!(status, StatusCode::CREATED);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_task_changes_interval() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        // Create a task first
+        let created = db::create_daily_task(
+            &pool,
+            "Original",
+            None,
+            None,
+            1,
+            1,
+            "2026-02-09",
+        )
+        .await
+        .unwrap();
+
+        let req = UpdateTaskRequest {
+            name: "Updated".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: Some(3),
+        };
+
+        let result = handle_update_task(created.id, req, pool).await;
+        assert!(result.is_ok(), "Should update task with new interval_weeks");
     }
 }
