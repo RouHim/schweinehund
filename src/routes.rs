@@ -401,6 +401,8 @@ async fn handle_create_task(
         req.description.as_deref(),
         req.zone.as_deref(),
         req.day_of_week,
+        1, // TODO: Task 5 will make this dynamic
+        "1970-01-01", // TODO: Task 5 will use today's date
     )
     .await
     .map_err(|_| reject::custom(DatabaseError))?;
@@ -439,6 +441,7 @@ async fn handle_update_task(
         req.description.as_deref(),
         req.zone.as_deref(),
         req.day_of_week,
+        1, // TODO: Task 5 will accept interval_weeks from request
     )
     .await
     .map_err(|e| {

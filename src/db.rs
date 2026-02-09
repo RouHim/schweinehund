@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::Result;
+use chrono::Datelike;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use sqlx::FromRow;
 
@@ -171,16 +172,84 @@ pub async fn complete_deep_task(pool: &SqlitePool, id: i64) -> Result<()> {
     Ok(())
 }
 
-/// Reset all daily tasks to uncompleted state
-pub async fn reset_daily_tasks(pool: &SqlitePool) -> Result<()> {
+pub fn is_due_this_week(start_date: &str, interval_weeks: i64, current_date: chrono::NaiveDate) -> bool {
+    if interval_weeks <= 1 {
+        return true;
+    }
+
+    let start = match chrono::NaiveDate::parse_from_str(start_date, "%Y-%m-%d") {
+        Ok(date) => date,
+        Err(_) => return true,
+    };
+
+    if current_date < start {
+        return false;
+    }
+
+    let start_iso_week = start.iso_week();
+    let current_iso_week = current_date.iso_week();
+
+    let Some(start_week_begin) = chrono::NaiveDate::from_isoywd_opt(
+        start_iso_week.year(),
+        start_iso_week.week(),
+        chrono::Weekday::Mon,
+    ) else {
+        return false;
+    };
+
+    let Some(current_week_begin) = chrono::NaiveDate::from_isoywd_opt(
+        current_iso_week.year(),
+        current_iso_week.week(),
+        chrono::Weekday::Mon,
+    ) else {
+        return false;
+    };
+
+    let weeks_elapsed = (current_week_begin - start_week_begin).num_days() / 7;
+    weeks_elapsed % interval_weeks == 0
+}
+
+/// Reset due daily tasks to uncompleted state
+pub async fn reset_daily_tasks(pool: &SqlitePool, current_date: chrono::NaiveDate) -> Result<()> {
     sqlx::query(
         r#"
         UPDATE daily_tasks
         SET completed = 0, completed_at = NULL
+        WHERE day_of_week = -1 OR interval_weeks = 1
         "#,
     )
     .execute(pool)
     .await?;
+
+    let interval_tasks = sqlx::query_as::<_, (i64, i64, Option<String>)>(
+        r#"
+        SELECT id, interval_weeks, start_date
+        FROM daily_tasks
+        WHERE day_of_week != -1 AND interval_weeks > 1
+        "#,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    for (id, interval_weeks, start_date) in interval_tasks {
+        let is_due = match start_date.as_deref() {
+            Some(start) => is_due_this_week(start, interval_weeks, current_date),
+            None => true,
+        };
+
+        if is_due {
+            sqlx::query(
+                r#"
+                UPDATE daily_tasks
+                SET completed = 0, completed_at = NULL
+                WHERE id = ?
+                "#,
+            )
+            .bind(id)
+            .execute(pool)
+            .await?;
+        }
+    }
 
     Ok(())
 }
@@ -287,17 +356,21 @@ pub async fn create_daily_task(
     description: Option<&str>,
     zone: Option<&str>,
     day_of_week: i64,
+    interval_weeks: i64,
+    start_date: &str,
 ) -> Result<DailyTask> {
     let result = sqlx::query(
         r#"
-        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at)
-        VALUES (?, ?, ?, ?, 0, NULL)
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+        VALUES (?, ?, ?, ?, 0, NULL, ?, ?)
         "#,
     )
     .bind(name)
     .bind(description)
     .bind(zone)
     .bind(day_of_week)
+    .bind(interval_weeks)
+    .bind(start_date)
     .execute(pool)
     .await?;
 
@@ -323,11 +396,12 @@ pub async fn update_daily_task(
     description: Option<&str>,
     zone: Option<&str>,
     day_of_week: i64,
+    interval_weeks: i64,
 ) -> Result<DailyTask> {
     sqlx::query(
         r#"
         UPDATE daily_tasks
-        SET name = ?, description = ?, zone = ?, day_of_week = ?
+        SET name = ?, description = ?, zone = ?, day_of_week = ?, interval_weeks = ?
         WHERE id = ?
         "#,
     )
@@ -335,6 +409,7 @@ pub async fn update_daily_task(
     .bind(description)
     .bind(zone)
     .bind(day_of_week)
+    .bind(interval_weeks)
     .bind(id)
     .execute(pool)
     .await?;
@@ -524,6 +599,21 @@ pub mod tests {
         Ok(pool)
     }
 
+    async fn get_daily_task_by_id(pool: &SqlitePool, id: i64) -> Result<DailyTask> {
+        let task = sqlx::query_as::<_, DailyTask>(
+            r#"
+            SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
+            FROM daily_tasks
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(task)
+    }
+
     #[tokio::test]
     async fn test_get_today_tasks() -> Result<()> {
         let pool = setup_test_db().await?;
@@ -615,13 +705,142 @@ pub mod tests {
         let tasks = get_today_tasks(&pool, 1).await?;
         toggle_task(&pool, tasks[0].id).await?;
 
-        reset_daily_tasks(&pool).await?;
+        let current_date = chrono::NaiveDate::from_ymd_opt(2026, 2, 9).unwrap();
+        reset_daily_tasks(&pool, current_date).await?;
 
         let tasks_after = get_today_tasks(&pool, 1).await?;
         for task in tasks_after {
             assert!(!task.completed);
             assert!(task.completed_at.is_none());
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_weekly_task() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Weekly task",
+            None,
+            None,
+            1,
+            1,
+            "2026-02-02",
+        )
+        .await?;
+        toggle_task(&pool, task.id).await?;
+
+        let current_date = chrono::NaiveDate::from_ymd_opt(2026, 2, 9).unwrap();
+        reset_daily_tasks(&pool, current_date).await?;
+
+        let task_after = get_daily_task_by_id(&pool, task.id).await?;
+        assert!(!task_after.completed);
+        assert!(task_after.completed_at.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_biweekly_task_due_week() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Biweekly due",
+            None,
+            None,
+            1,
+            2,
+            "2020-12-28",
+        )
+        .await?;
+        toggle_task(&pool, task.id).await?;
+
+        let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 11).unwrap();
+        reset_daily_tasks(&pool, current_date).await?;
+
+        let task_after = get_daily_task_by_id(&pool, task.id).await?;
+        assert!(!task_after.completed);
+        assert!(task_after.completed_at.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_biweekly_task_skip_week() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Biweekly skip",
+            None,
+            None,
+            1,
+            2,
+            "2020-12-28",
+        )
+        .await?;
+        toggle_task(&pool, task.id).await?;
+
+        let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 4).unwrap();
+        reset_daily_tasks(&pool, current_date).await?;
+
+        let task_after = get_daily_task_by_id(&pool, task.id).await?;
+        assert!(task_after.completed);
+        assert!(task_after.completed_at.is_some());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_mini_routine() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let result = sqlx::query(
+            r#"
+            INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+            VALUES (?, NULL, NULL, -1, 1, 1700000000, 4, NULL)
+            "#,
+        )
+        .bind("Mini routine interval test")
+        .execute(&pool)
+        .await?;
+        let task_id = result.last_insert_rowid();
+
+        let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 4).unwrap();
+        reset_daily_tasks(&pool, current_date).await?;
+
+        let task_after = get_daily_task_by_id(&pool, task_id).await?;
+        assert!(!task_after.completed);
+        assert!(task_after.completed_at.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_preserves_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Preserve start date",
+            None,
+            None,
+            1,
+            2,
+            "2020-12-28",
+        )
+        .await?;
+        toggle_task(&pool, task.id).await?;
+
+        let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 11).unwrap();
+        reset_daily_tasks(&pool, current_date).await?;
+
+        let task_after = get_daily_task_by_id(&pool, task.id).await?;
+        assert_eq!(task_after.start_date.as_deref(), Some("2020-12-28"));
 
         Ok(())
     }
@@ -649,6 +868,74 @@ pub mod tests {
         let settings = get_app_settings(&pool).await?;
         assert!(settings.notification_enabled);
         assert_eq!(settings.notification_time, "09:00");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_create_daily_task_with_interval() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Clean every 3 weeks",
+            Some("Biweekly task"),
+            Some("Kitchen"),
+            1,
+            3,
+            "2026-02-09",
+        )
+        .await?;
+
+        assert_eq!(task.name, "Clean every 3 weeks");
+        assert_eq!(task.interval_weeks, 3);
+        assert_eq!(task.start_date, Some("2026-02-09".to_string()));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_update_daily_task_interval() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(
+            &pool,
+            "Original task",
+            None,
+            None,
+            2,
+            1,
+            "2026-02-09",
+        )
+        .await?;
+
+        let updated = update_daily_task(
+            &pool,
+            task.id,
+            "Updated task",
+            Some("New description"),
+            Some("Bathroom"),
+            2,
+            4,
+        )
+        .await?;
+
+        assert_eq!(updated.name, "Updated task");
+        assert_eq!(updated.interval_weeks, 4);
+        assert_eq!(updated.day_of_week, 2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_create_daily_task_default_interval() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(&pool, "Default interval", None, None, 3, 1, "2026-02-09")
+            .await?;
+
+        assert_eq!(task.interval_weeks, 1);
+        assert_eq!(task.start_date, Some("2026-02-09".to_string()));
 
         Ok(())
     }

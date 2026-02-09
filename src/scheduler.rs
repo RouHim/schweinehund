@@ -26,10 +26,10 @@ fn get_next_midnight(now: chrono::DateTime<Local>) -> chrono::DateTime<Local> {
 }
 
 /// Execute a reset: uncheck all daily tasks and update last_reset_at
-async fn execute_reset(pool: &SqlitePool) -> Result<()> {
+async fn execute_reset(pool: &SqlitePool, current_date: chrono::NaiveDate) -> Result<()> {
     tracing::info!("Executing daily reset");
 
-    crate::db::reset_daily_tasks(pool).await?;
+    crate::db::reset_daily_tasks(pool, current_date).await?;
 
     let now = chrono::Utc::now().timestamp();
     crate::db::set_last_reset(pool, now).await?;
@@ -64,7 +64,7 @@ async fn startup_reconciliation(pool: &SqlitePool) -> Result<()> {
     // If today's midnight is after the last reset, we need to reset
     if today_midnight > last_reset {
         tracing::info!("Today's midnight has passed since last reset. Executing catchup reset.");
-        execute_reset(pool).await?;
+        execute_reset(pool, now.date_naive()).await?;
     } else {
         tracing::info!("No reset needed - last reset is current");
     }
@@ -99,7 +99,7 @@ pub fn start_scheduler(pool: SqlitePool) -> JoinHandle<()> {
             tokio::time::sleep_until(wake_time).await;
 
             // Execute the reset
-            if let Err(e) = execute_reset(&pool).await {
+            if let Err(e) = execute_reset(&pool, Local::now().date_naive()).await {
                 tracing::error!("Scheduled reset failed: {}", e);
             }
         }
@@ -108,7 +108,7 @@ pub fn start_scheduler(pool: SqlitePool) -> JoinHandle<()> {
 
 /// Manually trigger a reset (for debug endpoint)
 pub async fn trigger_reset_now(pool: &SqlitePool) -> Result<()> {
-    execute_reset(pool).await
+    execute_reset(pool, Local::now().date_naive()).await
 }
 
 #[cfg(test)]

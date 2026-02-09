@@ -1,10 +1,9 @@
 {
-  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/scratch-musl-container.md",
-  "started_at": "2026-02-07T18:44:02.953Z",
+  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/intervals-and-overview.md",
+  "started_at": "2026-02-09T12:04:02.268Z",
   "session_ids": [
-    "ses_3c6a779ccffecJY8stK9AqHXqT",
-    "ses_3c39bcdcbffelU5I9S7ODZWljj",
-    "ses_3c38f8697ffe1ni7OfzlRK0YWo"
+    "ses_3be0b924affezFpcw8Bd5Ohvtl"
   ],
-  "plan_name": "scratch-musl-container"
+  "plan_name": "intervals-and-overview",
+  "agent": "atlas"
 }
