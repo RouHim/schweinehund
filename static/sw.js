@@ -1,8 +1,9 @@
-const CACHE_NAME = 'schweinehund-v1';
+const CACHE_NAME = 'schweinehund-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
+  '/vendor/sortable.min.js',
   '/app.js',
   '/manifest.json'
 ];
