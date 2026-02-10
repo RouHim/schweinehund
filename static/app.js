@@ -164,7 +164,8 @@ const state = {
     deepCleaning: [],
     settings: null,
     allDailyTasks: [],
-    allDeepTasks: []
+    allDeepTasks: [],
+    hasLoadedTodayTasks: false
 };
 
 function initTheme() {
@@ -194,6 +195,7 @@ async function fetchTodayTasks() {
     const listEl = document.getElementById('tasks-list');
 
     try {
+        const wereAllDailyTasksCompleted = state.tasks.length > 0 && state.tasks.every(task => task.completed);
         const response = await fetch(`${API_BASE}/tasks/today`);
         if (!response.ok) {
             throw new Error(`Aufgaben konnten nicht geladen werden: ${response.statusText}`);
@@ -201,6 +203,11 @@ async function fetchTodayTasks() {
         
         const tasks = await response.json();
         state.tasks = tasks;
+        const areAllDailyTasksCompleted = tasks.length > 0 && tasks.every(task => task.completed);
+        if (state.hasLoadedTodayTasks && !wereAllDailyTasksCompleted && areAllDailyTasksCompleted) {
+            showFunFact();
+        }
+        state.hasLoadedTodayTasks = true;
         
         loadingEl.style.display = 'none';
         errorEl.style.display = 'none';

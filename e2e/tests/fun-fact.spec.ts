@@ -1,4 +1,34 @@
+import { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+
+async function completeAllDailyTasks(page: Page) {
+  const uncheckedCheckboxes = page.locator('#tasks-list .task-checkbox:not(:checked)');
+  const doneCounter = page.locator('#tasks-done');
+  const totalCounter = page.locator('#tasks-total');
+
+  const totalTasks = Number((await totalCounter.textContent()) || '0');
+  if (totalTasks <= 0) {
+    return;
+  }
+
+  let doneTasks = Number((await doneCounter.textContent()) || '0');
+  let guard = 0;
+
+  while (doneTasks < totalTasks) {
+    if ((await uncheckedCheckboxes.count()) === 0) {
+      break;
+    }
+
+    await uncheckedCheckboxes.first().check();
+    await expect.poll(async () => Number((await doneCounter.textContent()) || '0')).toBeGreaterThan(doneTasks);
+    doneTasks = Number((await doneCounter.textContent()) || '0');
+    guard += 1;
+
+    if (guard > 200) {
+      throw new Error('Could not complete all daily tasks within guard limit');
+    }
+  }
+}
 
 test.describe('Fun Fact Popup', () => {
   test.beforeEach(async ({ page }) => {
@@ -25,19 +55,16 @@ test.describe('Fun Fact Popup', () => {
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
 
-    await checkboxes.nth(count - 1).check();
+    await completeAllDailyTasks(page);
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
     await expect(page.locator('[data-testid="fun-fact-text"]')).not.toBeEmpty();
   });
 
   test('fun-fact popup auto-closes after 15 seconds', async ({ page }) => {
-    const checkboxes = page.locator('#tasks-list .task-checkbox');
-    const count = await checkboxes.count();
+    test.setTimeout(60_000);
 
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-    }
+    await completeAllDailyTasks(page);
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
 
@@ -47,12 +74,7 @@ test.describe('Fun Fact Popup', () => {
   });
 
   test('fun-fact popup can be closed manually', async ({ page }) => {
-    const checkboxes = page.locator('#tasks-list .task-checkbox');
-    const count = await checkboxes.count();
-
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-    }
+    await completeAllDailyTasks(page);
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
 
@@ -78,24 +100,14 @@ test.describe('Fun Fact Popup', () => {
       route.abort('failed');
     });
 
-    const checkboxes = page.locator('#tasks-list .task-checkbox');
-    const count = await checkboxes.count();
-
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-    }
+    await completeAllDailyTasks(page);
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
     await expect(page.locator('[data-testid="fun-fact-text"]')).toHaveText('Gut gemacht! 🎉');
   });
 
   test('displays German joke content from JokeAPI', async ({ page }) => {
-    const checkboxes = page.locator('#tasks-list .task-checkbox');
-    const count = await checkboxes.count();
-
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-    }
+    await completeAllDailyTasks(page);
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
     
@@ -105,12 +117,7 @@ test.describe('Fun Fact Popup', () => {
   });
 
   test('clicking backdrop does not close fun-fact modal', async ({ page }) => {
-    const checkboxes = page.locator('#tasks-list .task-checkbox');
-    const count = await checkboxes.count();
-
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-    }
+    await completeAllDailyTasks(page);
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
 
@@ -120,12 +127,9 @@ test.describe('Fun Fact Popup', () => {
   });
 
   test('unchecking last task does not trigger popup', async ({ page }) => {
-    const checkboxes = page.locator('#tasks-list .task-checkbox');
-    const count = await checkboxes.count();
+    await completeAllDailyTasks(page);
 
-    for (let i = 0; i < count; i++) {
-      await checkboxes.nth(i).check();
-    }
+    const checkboxes = page.locator('#tasks-list .task-checkbox');
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
     await page.locator('[data-testid="fun-fact-close-btn"]').click();
