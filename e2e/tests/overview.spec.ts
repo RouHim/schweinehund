@@ -4,6 +4,9 @@ test.describe('Overview Feature', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
+    await page.request.post('/api/debug/reset-all');
+    await page.reload();
+    await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
   });
 
   test('default tab is "Heute" on page load', async ({ page }) => {

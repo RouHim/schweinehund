@@ -26,6 +26,9 @@ test.describe('Mobile Viewport Interactions', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
+    await page.request.post('/api/debug/reset-all');
+    await page.reload();
+    await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
   });
 
   test('page renders correctly on mobile viewport', async ({ page }) => {

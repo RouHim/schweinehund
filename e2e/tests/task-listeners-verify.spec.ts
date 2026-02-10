@@ -1,6 +1,14 @@
 import { test, expect } from './fixtures';
 
 test.describe('attachTaskListeners verification', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
+    await page.request.post('/api/debug/reset-all');
+    await page.reload();
+    await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
+  });
+
   test('function exists in global scope', async ({ page }) => {
     await page.goto('/');
     
