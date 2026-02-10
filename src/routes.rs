@@ -128,9 +128,7 @@ fn get_today_tasks(
         .and_then(handle_get_today_tasks)
 }
 
-fn get_all_tasks(
-    pool: SqlitePool,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+fn get_all_tasks(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::path!("api" / "tasks" / "all")
         .and(warp::get())
         .and(with_db(pool))
@@ -430,7 +428,11 @@ async fn handle_create_task(
         return Err(reject::custom(DatabaseError));
     }
 
-    let final_interval = if req.day_of_week == -1 { 1 } else { interval_weeks };
+    let final_interval = if req.day_of_week == -1 {
+        1
+    } else {
+        interval_weeks
+    };
 
     let start_date = chrono::Local::now().format("%Y-%m-%d").to_string();
 
@@ -487,7 +489,11 @@ async fn handle_update_task(
         return Err(reject::custom(DatabaseError));
     }
 
-    let final_interval = if req.day_of_week == -1 { 1 } else { interval_weeks };
+    let final_interval = if req.day_of_week == -1 {
+        1
+    } else {
+        interval_weeks
+    };
 
     let task = db::update_daily_task(
         &pool,
@@ -645,7 +651,10 @@ mod tests {
         };
 
         let result = handle_create_task(req, pool).await;
-        assert!(result.is_ok(), "Should accept interval_weeks between 1 and 52");
+        assert!(
+            result.is_ok(),
+            "Should accept interval_weeks between 1 and 52"
+        );
     }
 
     #[tokio::test]
@@ -713,7 +722,10 @@ mod tests {
         };
 
         let result = handle_create_task(req, pool).await;
-        assert!(result.is_ok(), "Should accept mini-routine (day_of_week=-1)");
+        assert!(
+            result.is_ok(),
+            "Should accept mini-routine (day_of_week=-1)"
+        );
 
         if let Ok(reply) = result {
             // Parse the response to verify interval_weeks is forced to 1
@@ -728,17 +740,9 @@ mod tests {
         db::run_migrations(&pool).await.unwrap();
 
         // Create a task first
-        let created = db::create_daily_task(
-            &pool,
-            "Original",
-            None,
-            None,
-            1,
-            1,
-            "2026-02-09",
-        )
-        .await
-        .unwrap();
+        let created = db::create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09")
+            .await
+            .unwrap();
 
         let req = UpdateTaskRequest {
             name: "Updated".to_string(),

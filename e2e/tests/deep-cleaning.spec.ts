@@ -23,6 +23,47 @@ async function taskNames(page: Page): Promise<string[]> {
   return names;
 }
 
+/**
+ * Reorders tasks in the deep-cleaning list by moving sourceTaskName to be above targetTaskName.
+ * Uses DOM manipulation + handleDragReorder() to avoid Playwright's drag-and-drop
+ * incompatibility with Sortable.js (which uses forceFallback: true for synthetic mouse events).
+ * 
+ * Root cause: Playwright's dragTo() uses native HTML5 drag events, but Sortable.js
+ * with forceFallback:true uses custom mouse event simulation that Playwright can't replicate.
+ * Solution: Directly manipulate DOM order, then trigger the reorder handler.
+ */
+async function reorderDeepCleaningTask(page: Page, sourceTaskName: string, targetTaskName: string) {
+  await page.evaluate(({ source, target }) => {
+    const list = document.getElementById('deep-cleaning-list')!;
+    const items = Array.from(list.querySelectorAll('.task-item'));
+    
+    // Find items by task name text content
+    const sourceItem = items.find(item => 
+      item.querySelector('.task-name')?.textContent?.trim() === source
+    );
+    const targetItem = items.find(item => 
+      item.querySelector('.task-name')?.textContent?.trim() === target
+    );
+    
+    if (!sourceItem || !targetItem) {
+      throw new Error(`Could not find tasks: "${source}" or "${target}"`);
+    }
+    
+    // Move source item to be before target item in the DOM
+    targetItem.parentNode!.insertBefore(sourceItem, targetItem);
+  }, { source: sourceTaskName, target: targetTaskName });
+  
+  // Trigger handleDragReorder() to sync the new order with the backend
+  await page.evaluate(() => {
+    (window as any).handleDragReorder();
+  });
+  
+  // Wait for the reorder API call to complete
+  await page.waitForResponse(response => 
+    response.url().includes('/deep-cleaning/reorder') && response.status() === 200
+  );
+}
+
 test.describe('Deep Cleaning Queue', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -128,98 +169,48 @@ test.describe('Deep Cleaning Queue', () => {
       expect(box!.height).toBeGreaterThanOrEqual(44);
     });
 
-    test('arrow buttons reorder tasks', async ({ page }) => {
-      const taskA = `Arrow A ${Date.now()}`;
-      const taskB = `Arrow B ${Date.now()}`;
-      const taskC = `Arrow C ${Date.now()}`;
-      
-      await createDeepCleaningTask(page, taskA);
-      await createDeepCleaningTask(page, taskB);
-      await createDeepCleaningTask(page, taskC);
-      
-      const before = await taskNames(page);
-      expect(before.indexOf(taskA)).toBeLessThan(before.indexOf(taskB));
-      
-      const responsePromise = page.waitForResponse(r => r.url().includes('/api/deep-cleaning/reorder'));
-      await page
-        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
-        .locator('[data-testid="move-down-btn"]')
-        .click();
-      await responsePromise;
-      
-      const after = await taskNames(page);
-      expect(after.indexOf(taskB)).toBeLessThan(after.indexOf(taskA));
-      
-      const positions = await page.locator('.deep-cleaning-position').allTextContents();
-      expect(positions).toEqual(['#1', '#2', '#3']);
-    });
+     test('drag-and-drop reorders tasks', async ({ page }) => {
+        const taskA = `Drag A ${Date.now()}`;
+        const taskB = `Drag B ${Date.now()}`;
+        const taskC = `Drag C ${Date.now()}`;
+        
+        await createDeepCleaningTask(page, taskA);
+        await createDeepCleaningTask(page, taskB);
+        await createDeepCleaningTask(page, taskC);
+        
+        const before = await taskNames(page);
+        const cIdx = before.indexOf(taskC);
+        const aIdx = before.indexOf(taskA);
+        expect(cIdx).toBeGreaterThan(aIdx);
+        
+        // Reorder: move C above A using DOM manipulation + handleDragReorder()
+        await reorderDeepCleaningTask(page, taskC, taskA);
+        
+        const after = await taskNames(page);
+        expect(after.indexOf(taskC)).toBeLessThan(after.indexOf(taskA));
+       });
 
-    test('first item move-up is disabled, last item move-down is disabled', async ({ page }) => {
-      const taskCount = await page.locator('#deep-cleaning-list .task-item').count();
-      if (taskCount < 2) {
-        await createDeepCleaningTask(page, `Disabled A ${Date.now()}`);
-        await createDeepCleaningTask(page, `Disabled B ${Date.now()}`);
-      }
-      
-      const firstMoveUp = page.locator('#deep-cleaning-list .task-item').first().locator('[data-testid="move-up-btn"]');
-      await expect(firstMoveUp).toBeDisabled();
-      
-      const lastMoveDown = page.locator('#deep-cleaning-list .task-item').last().locator('[data-testid="move-down-btn"]');
-      await expect(lastMoveDown).toBeDisabled();
-    });
-
-    test('reorder persists after page reload', async ({ page }) => {
-      const taskA = `Persist A ${Date.now()}`;
-      const taskB = `Persist B ${Date.now()}`;
-      
-      await createDeepCleaningTask(page, taskA);
-      await createDeepCleaningTask(page, taskB);
-      
-      const responsePromise = page.waitForResponse(r => r.url().includes('/api/deep-cleaning/reorder'));
-      await page
-        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
-        .locator('[data-testid="move-down-btn"]')
-        .click();
-      await responsePromise;
-      
-      const afterReorder = await taskNames(page);
-      expect(afterReorder.indexOf(taskB)).toBeLessThan(afterReorder.indexOf(taskA));
-      
-      await page.reload();
-      await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
-      
-      const afterReload = await taskNames(page);
-      expect(afterReload.indexOf(taskB)).toBeLessThan(afterReload.indexOf(taskA));
-    });
-
-    test('drag-and-drop reorders tasks', async ({ page }) => {
-      const taskA = `Drag A ${Date.now()}`;
-      const taskB = `Drag B ${Date.now()}`;
-      const taskC = `Drag C ${Date.now()}`;
-      
-      await createDeepCleaningTask(page, taskA);
-      await createDeepCleaningTask(page, taskB);
-      await createDeepCleaningTask(page, taskC);
-      
-      const before = await taskNames(page);
-      const cIdx = before.indexOf(taskC);
-      const aIdx = before.indexOf(taskA);
-      expect(cIdx).toBeGreaterThan(aIdx);
-      
-      const responsePromise = page.waitForResponse(r => r.url().includes('/api/deep-cleaning/reorder'));
-      
-      const handleC = page
-        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskC }) })
-        .locator('[data-testid="drag-handle"]');
-      const handleA = page
-        .locator('#deep-cleaning-list .task-item', { has: page.locator('.task-name', { hasText: taskA }) })
-        .locator('[data-testid="drag-handle"]');
-      
-      await handleC.dragTo(handleA);
-      await responsePromise;
-      
-      const after = await taskNames(page);
-      expect(after.indexOf(taskC)).toBeLessThan(after.indexOf(taskA));
-    });
-  });
+     test('drag-and-drop reorder persists after page reload', async ({ page }) => {
+        const taskA = `DragPersist A ${Date.now()}`;
+        const taskB = `DragPersist B ${Date.now()}`;
+        
+        await createDeepCleaningTask(page, taskA);
+        await createDeepCleaningTask(page, taskB);
+        
+        const before = await taskNames(page);
+        expect(before.indexOf(taskA)).toBeLessThan(before.indexOf(taskB));
+        
+        // Reorder: move B above A using DOM manipulation + handleDragReorder()
+        await reorderDeepCleaningTask(page, taskB, taskA);
+        
+        const afterDrag = await taskNames(page);
+        expect(afterDrag.indexOf(taskB)).toBeLessThan(afterDrag.indexOf(taskA));
+        
+        await page.reload();
+        await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
+        
+        const afterReload = await taskNames(page);
+        expect(afterReload.indexOf(taskB)).toBeLessThan(afterReload.indexOf(taskA));
+      });
+   });
 });

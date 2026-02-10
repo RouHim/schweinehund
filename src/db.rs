@@ -102,7 +102,9 @@ async fn get_today_tasks_for_date(
 }
 
 /// Get all daily tasks (both mini-routines and regular weekday tasks)
-pub async fn get_all_daily_tasks(pool: &SqlitePool) -> Result<(Vec<DailyTask>, Vec<DeepCleaningTask>)> {
+pub async fn get_all_daily_tasks(
+    pool: &SqlitePool,
+) -> Result<(Vec<DailyTask>, Vec<DeepCleaningTask>)> {
     let daily_tasks = sqlx::query_as::<_, DailyTask>(
         r#"
         SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
@@ -216,7 +218,11 @@ pub async fn complete_deep_task(pool: &SqlitePool, id: i64) -> Result<()> {
     Ok(())
 }
 
-pub fn is_due_this_week(start_date: &str, interval_weeks: i64, current_date: chrono::NaiveDate) -> bool {
+pub fn is_due_this_week(
+    start_date: &str,
+    interval_weeks: i64,
+    current_date: chrono::NaiveDate,
+) -> bool {
     if interval_weeks <= 1 {
         return true;
     }
@@ -675,16 +681,8 @@ pub mod tests {
     async fn test_today_tasks_weekly_shows_on_correct_day() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Weekly monday",
-            None,
-            None,
-            1,
-            1,
-            "2026-01-05",
-        )
-        .await?;
+        let task =
+            create_daily_task(&pool, "Weekly monday", None, None, 1, 1, "2026-01-05").await?;
 
         let monday = chrono::NaiveDate::from_ymd_opt(2026, 1, 12).unwrap();
         let monday_tasks = get_today_tasks_for_date(&pool, 1, monday).await?;
@@ -700,16 +698,7 @@ pub mod tests {
     async fn test_today_tasks_biweekly_shows_on_due_week() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Biweekly due",
-            None,
-            None,
-            1,
-            2,
-            "2026-01-05",
-        )
-        .await?;
+        let task = create_daily_task(&pool, "Biweekly due", None, None, 1, 2, "2026-01-05").await?;
 
         let due_week = chrono::NaiveDate::from_ymd_opt(2026, 1, 19).unwrap();
         let tasks = get_today_tasks_for_date(&pool, 1, due_week).await?;
@@ -723,16 +712,8 @@ pub mod tests {
     async fn test_today_tasks_biweekly_hides_on_skip_week() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Biweekly skip",
-            None,
-            None,
-            1,
-            2,
-            "2026-01-05",
-        )
-        .await?;
+        let task =
+            create_daily_task(&pool, "Biweekly skip", None, None, 1, 2, "2026-01-05").await?;
 
         let skip_week = chrono::NaiveDate::from_ymd_opt(2026, 1, 12).unwrap();
         let tasks = get_today_tasks_for_date(&pool, 1, skip_week).await?;
@@ -888,16 +869,7 @@ pub mod tests {
     async fn test_reset_weekly_task() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Weekly task",
-            None,
-            None,
-            1,
-            1,
-            "2026-02-02",
-        )
-        .await?;
+        let task = create_daily_task(&pool, "Weekly task", None, None, 1, 1, "2026-02-02").await?;
         toggle_task(&pool, task.id).await?;
 
         let current_date = chrono::NaiveDate::from_ymd_opt(2026, 2, 9).unwrap();
@@ -914,16 +886,7 @@ pub mod tests {
     async fn test_reset_biweekly_task_due_week() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Biweekly due",
-            None,
-            None,
-            1,
-            2,
-            "2020-12-28",
-        )
-        .await?;
+        let task = create_daily_task(&pool, "Biweekly due", None, None, 1, 2, "2020-12-28").await?;
         toggle_task(&pool, task.id).await?;
 
         let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 11).unwrap();
@@ -940,16 +903,8 @@ pub mod tests {
     async fn test_reset_biweekly_task_skip_week() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Biweekly skip",
-            None,
-            None,
-            1,
-            2,
-            "2020-12-28",
-        )
-        .await?;
+        let task =
+            create_daily_task(&pool, "Biweekly skip", None, None, 1, 2, "2020-12-28").await?;
         toggle_task(&pool, task.id).await?;
 
         let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 4).unwrap();
@@ -991,16 +946,8 @@ pub mod tests {
     async fn test_reset_preserves_start_date() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Preserve start date",
-            None,
-            None,
-            1,
-            2,
-            "2020-12-28",
-        )
-        .await?;
+        let task =
+            create_daily_task(&pool, "Preserve start date", None, None, 1, 2, "2020-12-28").await?;
         toggle_task(&pool, task.id).await?;
 
         let current_date = chrono::NaiveDate::from_ymd_opt(2021, 1, 11).unwrap();
@@ -1065,16 +1012,8 @@ pub mod tests {
     async fn test_update_daily_task_interval() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(
-            &pool,
-            "Original task",
-            None,
-            None,
-            2,
-            1,
-            "2026-02-09",
-        )
-        .await?;
+        let task =
+            create_daily_task(&pool, "Original task", None, None, 2, 1, "2026-02-09").await?;
 
         let updated = update_daily_task(
             &pool,
@@ -1098,8 +1037,8 @@ pub mod tests {
     async fn test_create_daily_task_default_interval() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task = create_daily_task(&pool, "Default interval", None, None, 3, 1, "2026-02-09")
-            .await?;
+        let task =
+            create_daily_task(&pool, "Default interval", None, None, 3, 1, "2026-02-09").await?;
 
         assert_eq!(task.interval_weeks, 1);
         assert_eq!(task.start_date, Some("2026-02-09".to_string()));
@@ -1112,7 +1051,7 @@ pub mod tests {
         let pool = setup_test_db().await?;
 
         let (daily, deep) = get_all_daily_tasks(&pool).await?;
-        
+
         assert!(daily.len() > 0, "Should return daily tasks");
         assert!(deep.len() > 0, "Should return deep cleaning tasks");
         assert_eq!(deep.len(), 4, "Should have 4 deep cleaning tasks");
@@ -1125,13 +1064,16 @@ pub mod tests {
         let pool = setup_test_db().await?;
 
         let (daily, _) = get_all_daily_tasks(&pool).await?;
-        
+
         // Should include mini-routines (-1) and all day_of_week values (1-7)
         let mini_routine_count = daily.iter().filter(|t| t.day_of_week == -1).count();
         assert_eq!(mini_routine_count, 5, "Should include 5 mini-routine tasks");
-        
+
         // Should have at least some regular tasks
-        let regular_count = daily.iter().filter(|t| t.day_of_week >= 1 && t.day_of_week <= 7).count();
+        let regular_count = daily
+            .iter()
+            .filter(|t| t.day_of_week >= 1 && t.day_of_week <= 7)
+            .count();
         assert!(regular_count > 0, "Should include regular weekday tasks");
 
         Ok(())
@@ -1142,9 +1084,12 @@ pub mod tests {
         let pool = setup_test_db().await?;
 
         let (daily, _) = get_all_daily_tasks(&pool).await?;
-        
+
         let has_mini_routine = daily.iter().any(|t| t.day_of_week == -1);
-        assert!(has_mini_routine, "Should include mini-routine tasks (day_of_week = -1)");
+        assert!(
+            has_mini_routine,
+            "Should include mini-routine tasks (day_of_week = -1)"
+        );
 
         Ok(())
     }
