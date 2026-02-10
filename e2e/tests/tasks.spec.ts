@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { type Locator, type Page } from '@playwright/test';
 
 function currentApiDay(): string {
   const jsDay = new Date().getDay();

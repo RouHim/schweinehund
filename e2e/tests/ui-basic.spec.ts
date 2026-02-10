@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Schweinehund UI Basic Tests', () => {
   test.beforeEach(async ({ page }) => {

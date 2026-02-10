@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Desktop Layout - Two Column Grid', () => {
   test('displays side-by-side layout at 1024px viewport', async ({ page }) => {
