@@ -107,6 +107,7 @@ pub fn api_routes(
         .or(update_task(pool.clone()))
         .or(delete_task(pool.clone()))
         .or(debug_reset(pool.clone()))
+        .or(debug_reset_all(pool.clone()))
         .or(debug_notify_status(pool.clone()))
         .or(debug_notify(pool))
         .with(cors)
@@ -554,6 +555,25 @@ async fn handle_debug_reset(pool: SqlitePool) -> Result<impl Reply, Rejection> {
 
     Ok(warp::reply::json(&SuccessResponse {
         message: "Daily tasks reset successfully".to_string(),
+    }))
+}
+
+fn debug_reset_all(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "debug" / "reset-all")
+        .and(warp::post())
+        .and(with_db(pool))
+        .and_then(handle_debug_reset_all)
+}
+
+async fn handle_debug_reset_all(pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    db::reset_all_data(&pool)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&SuccessResponse {
+        message: "All data reset to initial seed state successfully".to_string(),
     }))
 }
 

@@ -639,6 +639,109 @@ pub async fn reorder_deep_cleaning_queue(
     get_deep_cleaning_queue(pool).await
 }
 
+/// Reset all data to initial seed state
+pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
+    sqlx::query("DELETE FROM daily_tasks").execute(pool).await?;
+    sqlx::query("DELETE FROM deep_cleaning_tasks")
+        .execute(pool)
+        .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at) VALUES
+        ('Spuelmaschine an/aus', 'Spülmaschine starten oder ausräumen', NULL, -1, 0, NULL),
+        ('Kueche grob aufraeumen', 'Küche aufräumen und Arbeitsplatz frei machen', 'EG - Wohnbereich/Kueche/WC', -1, 0, NULL),
+        ('1 Waeschegang oder Waesche falten', 'Wäsche waschen oder bereits gewaschene Wäsche falten', NULL, -1, 0, NULL),
+        ('5 Min gemeinsames Aufraeumen', 'Kurzes Aufräumen mit der Familie', NULL, -1, 0, NULL),
+        ('Oberflaechen frei machen', 'Oberflächen von Gegenständen befreien', NULL, -1, 0, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at) VALUES
+        ('Kueche: Arbeitsflaechen, Herd, Spuele', 'Küche reinigen: Arbeitsplatz, Herd und Spüle', 'EG - Wohnbereich/Kueche/WC', 1, 0, NULL),
+        ('Esstisch & Couchtisch abwischen', 'Tische abwischen und säubern', 'EG - Wohnbereich/Kueche/WC', 1, 0, NULL),
+        ('WC kurz reinigen', 'Toilette reinigen und säubern', 'EG - Wohnbereich/Kueche/WC', 1, 0, NULL),
+        ('Boden: nur WISCHEN', 'Boden wischen (nicht saugen)', 'EG - Wohnbereich/Kueche/WC', 1, 0, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at) VALUES
+        ('Waschmaschine & Trockner', 'Waschmaschine und Trockner aufräumen/warten', 'KG - Keller/Waschen', 2, 0, NULL),
+        ('Leere Kartons / Muell raus', 'Leere Kartons und Müll hinausbringen', 'KG - Keller/Waschen', 2, 0, NULL),
+        ('1 Ecke / 1 Regal ordnen', 'Eine Ecke oder ein Regal organisieren', 'KG - Keller/Waschen', 2, 0, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at) VALUES
+        ('Bad: WC, Waschbecken, Spiegel', 'Badezimmer reinigen: WC, Waschbecken und Spiegel', '1.OG - Schlaf/Kind/Bad', 3, 0, NULL),
+        ('Betten richten', 'Betten machen und Bettzeug aufschütteln', '1.OG - Schlaf/Kind/Bad', 3, 0, NULL),
+        ('Waesche einsammeln', 'Schmutzige Wäsche einsammeln', '1.OG - Schlaf/Kind/Bad', 3, 0, NULL),
+        ('Saugen', 'Saugen und Böden reinigen', '1.OG - Schlaf/Kind/Bad', 3, 0, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at) VALUES
+        ('Staub wischen (1-2 Raeume)', 'Staub abwischen in 1-2 Räumen', 'Buero', 4, 0, NULL),
+        ('Papierkram einsammeln', 'Papiere organisieren und sortieren', 'Buero', 4, 0, NULL),
+        ('Dinge zuruecklegen', 'Gegenstände an ihren Platz zurückbringen', NULL, 4, 0, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at) VALUES
+        ('Muell raus', 'Müll hinausbringen für die Woche', NULL, 5, 0, NULL),
+        ('Waesche falten', 'Ganze Woche Wäsche falten', NULL, 5, 0, NULL),
+        ('Oberflaechen frei', 'Alle Oberflächen befreien', NULL, 5, 0, NULL),
+        ('Bad-Check (Handtuecher, WC)', 'Badezimmer kontrollieren: Handtücher, WC säubern', '1.OG - Schlaf/Kind/Bad', 5, 0, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO deep_cleaning_tasks (name, description, queue_position, completed_at) VALUES
+        ('Bad gruendlich', 'Gründliche Badreinigung - alle Ecken und Fugen', 1, NULL),
+        ('Kuehlschrank', 'Kühlschrank ausräumen und gründlich reinigen', 2, NULL),
+        ('Fenster putzen', 'Alle Fenster putzen - innen und außen', 3, NULL),
+        ('Schrank/Spielzeug aussortieren', 'Schrank oder Spielzeug sortieren und entrümpeln', 4, NULL)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = '0'
+        WHERE key = 'last_reset_at'
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
