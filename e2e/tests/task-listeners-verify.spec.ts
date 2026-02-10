@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('attachTaskListeners verification', () => {
   test('function exists in global scope', async ({ page }) => {
-    await page.goto('http://localhost:9666/');
+    await page.goto('/');
     
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
     
@@ -18,7 +18,7 @@ test.describe('attachTaskListeners verification', () => {
       errors.push(error.message);
     });
     
-    await page.goto('http://localhost:9666/');
+    await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
     await page.waitForLoadState('networkidle');
     
@@ -26,7 +26,7 @@ test.describe('attachTaskListeners verification', () => {
   });
 
   test('checkbox toggle updates state', async ({ page }) => {
-    await page.goto('http://localhost:9666/');
+    await page.goto('/');
     await page.waitForSelector('#tasks-list .task-checkbox', { state: 'visible', timeout: 5000 });
     
     const checkbox = await page.locator('#tasks-list .task-checkbox').first();
@@ -40,7 +40,7 @@ test.describe('attachTaskListeners verification', () => {
   });
 
   test('edit button opens modal', async ({ page }) => {
-    await page.goto('http://localhost:9666/');
+    await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
     
     const editBtn = await page.locator('#tasks-list [data-testid="edit-btn"]').first();

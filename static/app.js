@@ -96,6 +96,8 @@ function openModal(type, task = null) {
 }
 
 window.openModal = openModal;
+window.handleDragReorder = handleDragReorder;
+window.attachTaskListeners = attachTaskListeners;
 
 function closeModal() {
     const modal = document.getElementById('task-modal');
