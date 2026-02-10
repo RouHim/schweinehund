@@ -146,6 +146,36 @@ h2 {
     line-height: 1;
 }
 
+.tab-bar {
+    display: flex;
+    gap: 0;
+    background: var(--surface, var(--background-secondary));
+    border-bottom: 1px solid var(--border);
+    padding: 0 1rem;
+}
+
+.tab-bar .tab {
+    background: none;
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition);
+}
+
+.tab-bar .tab:hover {
+    color: var(--text);
+    background: var(--primary-faint);
+}
+
+.tab-bar .tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
 /* --- Container --- */
 .container {
     max-width: 720px;
@@ -603,6 +633,23 @@ section {
     border-left: 3px solid var(--error);
     font-size: 0.875rem;
     font-weight: 500;
+}
+
+#all-tasks-section {
+    padding: 2rem 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+#all-tasks-section h2 {
+    font-size: 1.25rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+#all-tasks-section h2:first-child {
+    margin-top: 0;
 }
 
 /* --- Settings Form --- */

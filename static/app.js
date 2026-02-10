@@ -162,7 +162,9 @@ async function handleTaskSubmit(event) {
 const state = {
     tasks: [],
     deepCleaning: [],
-    settings: null
+    settings: null,
+    allDailyTasks: [],
+    allDeepTasks: []
 };
 
 function initTheme() {
@@ -249,6 +251,36 @@ async function deleteTask(type, id) {
     }
 }
 
+function switchTab(tabName) {
+    const todaySection = document.getElementById('today-section');
+    const deepSection = document.getElementById('deep-cleaning-section');
+    const settingsSection = document.getElementById('settings-section');
+    const allTasksSection = document.getElementById('all-tasks-section');
+    const todayTab = document.querySelector('[data-tab="today"]');
+    const allTab = document.querySelector('[data-tab="all"]');
+    
+    if (tabName === 'today') {
+        todaySection.style.display = 'block';
+        deepSection.style.display = 'block';
+        if (settingsSection) settingsSection.style.display = 'block';
+        allTasksSection.style.display = 'none';
+        todayTab.classList.add('active');
+        allTab.classList.remove('active');
+        
+        fetchTodayTasks();
+        fetchDeepCleaning();
+    } else if (tabName === 'all') {
+        todaySection.style.display = 'none';
+        deepSection.style.display = 'none';
+        if (settingsSection) settingsSection.style.display = 'none';
+        allTasksSection.style.display = 'block';
+        todayTab.classList.remove('active');
+        allTab.classList.add('active');
+        
+        fetchAllTasks();
+    }
+}
+
 function renderTasks(tasks) {
     const listEl = document.getElementById('tasks-list');
     
@@ -302,85 +334,103 @@ function renderTasks(tasks) {
     updateProgress(completedCount, tasks.length);
 }
 
-function attachTaskListeners() {
-    const listEl = document.getElementById('tasks-list');
-    const checkboxes = listEl.querySelectorAll('.task-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleTaskToggle);
-    });
-
-    listEl.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent triggering checkbox
-            const id = parseInt(btn.dataset.taskId);
-            const task = state.tasks.find(t => t.id === id);
-            if (task) window.openModal('daily', task);
-        });
-    });
-
-    listEl.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent triggering checkbox
-            const id = parseInt(btn.dataset.taskId);
-            deleteTask('daily', id);
-        });
-    });
+async function fetchAllTasks() {
+    try {
+        const response = await fetch(`${API_BASE}/tasks/all`);
+        if (!response.ok) throw new Error('Failed to fetch all tasks');
+        
+        const data = await response.json();
+        state.allDailyTasks = data.daily_tasks || [];
+        state.allDeepTasks = data.deep_cleaning_tasks || [];
+        
+        renderAllTasks();
+    } catch (error) {
+        console.error('Error fetching all tasks:', error);
+    }
 }
 
-async function handleTaskToggle(event) {
-    const checkbox = event.target;
-    const taskId = checkbox.dataset.taskId;
-    const isChecked = checkbox.checked;
+function renderAllTasks() {
+    const dailyList = document.getElementById('all-daily-tasks-list');
+    const deepList = document.getElementById('all-deep-tasks-list');
     
-    const taskItem = checkbox.closest('.task-item');
-    if (isChecked) {
-        taskItem.classList.add('completed');
-    } else {
-        taskItem.classList.remove('completed');
-    }
+    if (!dailyList || !deepList) return;
     
-    const completedCount = state.tasks.filter(t => t.id === parseInt(taskId) ? isChecked : t.completed).length;
-    updateProgress(completedCount, state.tasks.length);
+    // Render daily tasks
+    dailyList.innerHTML = state.allDailyTasks.map(task => {
+        return `
+            <li class="task-item">
+                <div class="task-content">
+                    <h3 class="task-name">${escapeHtml(task.name)}</h3>
+                    ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
+                    <div class="task-meta">
+                        ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
+                        ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
+                        ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
+                        ${EDIT_ICON}
+                    </button>
+                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Aufgabe löschen">
+                        ${DELETE_ICON}
+                    </button>
+                </div>
+            </li>
+        `;
+    }).join('');
     
-    try {
-        const response = await fetch(`${API_BASE}/tasks/${taskId}/toggle`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+    // Render deep cleaning tasks
+    deepList.innerHTML = state.allDeepTasks.map(task => {
+        return `
+            <li class="task-item">
+                <div class="task-content">
+                    <h3 class="task-name">${escapeHtml(task.name)}</h3>
+                    ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
+                    <div class="task-meta">
+                        ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
+                        ${EDIT_ICON}
+                    </button>
+                    <button data-testid="delete-btn" data-task-id="${task.id}" class="icon-btn delete-btn" aria-label="Aufgabe löschen">
+                        ${DELETE_ICON}
+                    </button>
+                </div>
+            </li>
+        `;
+    }).join('');
+    
+    // Attach listeners for all-tasks-section edit/delete buttons
+    const allTasksSection = document.getElementById('all-tasks-section');
+    if (allTasksSection) {
+        allTasksSection.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.taskId);
+                let task = state.allDailyTasks.find(t => t.id === id);
+                let type = 'daily';
+                if (!task) {
+                    task = state.allDeepTasks.find(t => t.id === id);
+                    type = 'deep';
+                }
+                if (task) window.openModal(type, task);
+            });
         });
-        
-        if (!response.ok) {
-            throw new Error(`Aufgabe konnte nicht umgeschaltet werden: ${response.statusText}`);
-        }
-        
-        const updatedTask = await response.json();
-        
-        const taskIndex = state.tasks.findIndex(t => t.id === parseInt(taskId));
-        if (taskIndex !== -1) {
-            state.tasks[taskIndex] = updatedTask;
-        }
-        
-        const allCompleted = state.tasks.every(t => t.completed);
-        if (isChecked && allCompleted) {
-            await showFunFact();
-        }
-        
-    } catch (error) {
-        console.error('Fehler beim Umschalten der Aufgabe:', error);
-        
-        checkbox.checked = !isChecked;
-        if (isChecked) {
-            taskItem.classList.remove('completed');
-        } else {
-            taskItem.classList.add('completed');
-        }
-        
-        const revertedCount = state.tasks.filter(t => t.completed).length;
-        updateProgress(revertedCount, state.tasks.length);
-        
-        alert(`Aufgabe konnte nicht aktualisiert werden: ${error.message}`);
+
+        allTasksSection.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.taskId);
+                let type = 'daily';
+                if (!state.allDailyTasks.find(t => t.id === id)) {
+                    type = 'deep';
+                }
+                deleteTask(type, id);
+            });
+        });
     }
 }
 
@@ -799,6 +849,13 @@ function init() {
     fetchTodayTasks();
     fetchDeepCleaning();
     fetchSettings();
+    
+    document.querySelectorAll('.tab-bar .tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            const tabName = e.target.getAttribute('data-tab');
+            switchTab(tabName);
+        });
+    });
 }
 
 if (document.readyState === 'loading') {
