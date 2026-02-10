@@ -485,8 +485,6 @@ function renderDeepCleaning(tasks) {
                     ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
                 </div>
                 <div class="task-actions">
-                    <button data-testid="move-up-btn" data-task-id="${task.id}" class="icon-btn move-btn move-up-btn" aria-label="Nach oben verschieben" ${index === 0 ? 'disabled' : ''}>↑</button>
-                    <button data-testid="move-down-btn" data-task-id="${task.id}" class="icon-btn move-btn move-down-btn" aria-label="Nach unten verschieben" ${index === tasks.length - 1 ? 'disabled' : ''}>↓</button>
                     <button data-testid="complete-btn" data-task-id="${task.id}" class="complete-btn" aria-label="Aufgabe erledigen">Erledigt</button>
                     <button data-testid="edit-btn" data-task-id="${task.id}" class="icon-btn edit-btn" aria-label="Aufgabe bearbeiten">
                         ${EDIT_ICON}
@@ -527,6 +525,46 @@ function renderDeepCleaning(tasks) {
     }
 }
 
+function attachTaskListeners() {
+    const listEl = document.getElementById('tasks-list');
+
+    // Checkbox toggle
+    listEl.querySelectorAll('.task-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async () => {
+            const taskId = checkbox.dataset.taskId;
+            try {
+                const response = await fetch(`${API_BASE}/tasks/${taskId}/toggle`, {
+                    method: 'POST'
+                });
+                if (!response.ok) throw new Error(`Toggle failed: ${response.statusText}`);
+                await fetchTodayTasks();
+            } catch (error) {
+                console.error('Fehler beim Umschalten der Aufgabe:', error);
+                await fetchTodayTasks();
+            }
+        });
+    });
+
+    // Edit buttons
+    listEl.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            const task = state.tasks.find(t => t.id === id);
+            if (task) openModal('daily', task);
+        });
+    });
+
+    // Delete buttons
+    listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            deleteTask('daily', id);
+        });
+    });
+}
+
 function attachDeepCleaningListeners() {
     const listEl = document.getElementById('deep-cleaning-list');
 
@@ -553,23 +591,7 @@ function attachDeepCleaningListeners() {
             const id = parseInt(btn.dataset.taskId);
             deleteTask('deep-cleaning', id);
         });
-    });
-
-    listEl.querySelectorAll('.move-up-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const taskId = parseInt(btn.dataset.taskId);
-            await handleArrowMove(taskId, 'up');
-        });
-    });
-
-    listEl.querySelectorAll('.move-down-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const taskId = parseInt(btn.dataset.taskId);
-            await handleArrowMove(taskId, 'down');
-        });
-    });
+     });
 }
 
 async function handleDeepCleaningComplete(taskId, btn) {
@@ -626,37 +648,6 @@ async function handleDragReorder() {
     }
 }
 
-async function handleArrowMove(taskId, direction) {
-    const currentIdx = state.deepCleaning.findIndex(t => t.id === taskId);
-    if (currentIdx === -1) return;
-    
-    const swapIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
-    if (swapIdx < 0 || swapIdx >= state.deepCleaning.length) return;
-    
-    document.querySelectorAll('.move-btn').forEach(btn => btn.disabled = true);
-    
-    const newOrder = [...state.deepCleaning];
-    [newOrder[currentIdx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[currentIdx]];
-    const orderIds = newOrder.map(t => t.id);
-    
-    try {
-        const response = await fetch(`${API_BASE}/deep-cleaning/reorder`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order: orderIds })
-        });
-        
-        if (!response.ok) throw new Error(`Reorder failed: ${response.statusText}`);
-        
-        const updated = await response.json();
-        state.deepCleaning = updated;
-        renderDeepCleaning(state.deepCleaning);
-        
-    } catch (error) {
-        console.error('Arrow move error:', error);
-        renderDeepCleaning(state.deepCleaning);
-    }
-}
 
 async function fetchSettings() {
     const loadingEl = document.getElementById('settings-loading');

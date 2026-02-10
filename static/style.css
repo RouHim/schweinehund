@@ -528,18 +528,6 @@ section {
     cursor: grabbing;
 }
 
-/* --- Move Buttons --- */
-.move-btn {
-    font-size: 1rem;
-    font-weight: bold;
-}
-
-.move-btn:disabled {
-    opacity: 0.15;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
 /* --- Sortable Drag States --- */
 .sortable-ghost {
     opacity: 0.3;
