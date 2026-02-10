@@ -1,9 +1,9 @@
 {
-  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/intervals-and-overview.md",
-  "started_at": "2026-02-09T12:04:02.268Z",
+  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/fix-e2e-tests.md",
+  "started_at": "2026-02-10T09:58:46.333Z",
   "session_ids": [
-    "ses_3be0b924affezFpcw8Bd5Ohvtl"
+    "ses_3b9323bfbffeVtXLGVwCaqQLvF"
   ],
-  "plan_name": "intervals-and-overview",
+  "plan_name": "fix-e2e-tests",
   "agent": "atlas"
 }

@@ -230,3 +230,4 @@ RUST_LOG=info                              # Logging level
 * You are not allowed to use sudo or root privileges on the system. Always work within the confines of your user
   permissions. If you need
   elevated permissions for a task, please request assistance from a human operator.
+* Before shipping a feature, make sure to run Full test suite before commiting, this might take some time but ensure consistency
