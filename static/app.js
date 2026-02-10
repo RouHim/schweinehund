@@ -49,6 +49,8 @@ function openModal(type, task = null) {
     const zoneInput = document.getElementById('task-zone');
     const dayField = document.getElementById('day-of-week-field');
     const dayInput = document.getElementById('task-day-of-week');
+    const intervalGroup = document.getElementById('interval-group');
+    const intervalInput = document.getElementById('task-interval-weeks');
     
     if (!modal || !form) return;
     
@@ -71,6 +73,8 @@ function openModal(type, task = null) {
         zoneInput.value = task.zone || '';
         if (type === 'daily') {
             dayInput.value = task.day_of_week;
+            intervalInput.value = task.interval_weeks || 1;
+            intervalGroup.style.display = task.day_of_week === -1 ? 'none' : 'block';
         }
     } else {
         title.textContent = 'Aufgabe hinzufügen';
@@ -79,8 +83,14 @@ function openModal(type, task = null) {
             const today = new Date().getDay();
             const apiDay = today === 0 ? 7 : today;
             dayInput.value = apiDay;
+            intervalInput.value = 1;
+            intervalGroup.style.display = 'block';
         }
     }
+    
+    dayInput.addEventListener('change', () => {
+        intervalGroup.style.display = dayInput.value === '-1' ? 'none' : 'block';
+    });
     
     modal.showModal();
 }
@@ -112,6 +122,7 @@ async function handleTaskSubmit(event) {
     
     if (type === 'daily') {
         data.day_of_week = parseInt(formData.get('day_of_week'));
+        data.interval_weeks = parseInt(document.getElementById('task-interval-weeks').value) || 1;
     }
     
     const endpoint = type === 'daily' ? 'tasks' : 'deep-cleaning';
@@ -267,9 +278,10 @@ function renderTasks(tasks) {
                         <h3 class="task-name">${escapeHtml(task.name)}</h3>
                         ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
                         <div class="task-meta">
-                            ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
-                            ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
-                        </div>
+                             ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
+                             ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
+                             ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
+                         </div>
                     </div>
                 </label>
                 <div class="task-actions">

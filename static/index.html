@@ -120,6 +120,11 @@
                         <option value="7">Sonntag</option>
                     </select>
                 </label>
+
+                <label id="interval-group" style="display:none;">
+                    Wiederholung (alle X Wochen)
+                    <input type="number" id="task-interval-weeks" min="1" max="52" value="1" data-testid="interval-weeks-input">
+                </label>
                 
                 <footer>
                     <button type="button" class="secondary" data-close-modal data-testid="modal-cancel-btn">Abbrechen</button>

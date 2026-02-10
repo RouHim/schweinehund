@@ -988,3 +988,12 @@ dialog footer button.secondary:hover {
         transition-duration: 0.01ms !important;
     }
 }
+
+.interval-badge {
+    background-color: var(--primary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}
