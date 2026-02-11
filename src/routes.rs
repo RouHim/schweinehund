@@ -504,6 +504,7 @@ async fn handle_update_task(
         req.zone.as_deref(),
         req.day_of_week,
         final_interval,
+        None,
     )
     .await
     .map_err(|e| {

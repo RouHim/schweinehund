@@ -1,9 +1,9 @@
 {
-  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/fix-e2e-tests.md",
-  "started_at": "2026-02-10T09:58:46.333Z",
+  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/start-date-feature.md",
+  "started_at": "2026-02-11T16:19:13.896Z",
   "session_ids": [
-    "ses_3b9323bfbffeVtXLGVwCaqQLvF"
+    "ses_3b28c8554ffeQCbg0o89iWW8aL"
   ],
-  "plan_name": "fix-e2e-tests",
+  "plan_name": "start-date-feature",
   "agent": "atlas"
 }
