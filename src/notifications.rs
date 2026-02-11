@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{Datelike, Timelike};
+use chrono::Datelike;
 use serde::Serialize;
 use sqlx::SqlitePool;
 use tracing::{error, info};
@@ -123,7 +123,7 @@ impl NtfyClient {
         }
     }
 
-    /// Send daily reminder about tasks (with quiet hours check)
+    /// Send daily reminder about tasks
     pub async fn send_daily_reminder(&self, pool: &SqlitePool) -> Result<()> {
         // Check if notifications are enabled
         let settings = crate::db::get_app_settings(pool).await?;
@@ -132,15 +132,8 @@ impl NtfyClient {
             return Ok(());
         }
 
-        // Check current time - don't send between 10 PM and 7 AM (quiet hours)
-        let now = chrono::Local::now();
-        let hour = now.hour();
-        if !(7..22).contains(&hour) {
-            info!("Quiet hours (10 PM - 7 AM), skipping notification");
-            return Ok(());
-        }
-
         // Get today's incomplete tasks
+        let now = chrono::Local::now();
         let day_of_week = now.weekday().num_days_from_monday() as i64 + 1;
         let tasks = crate::db::get_today_tasks(pool, day_of_week).await?;
         let incomplete_tasks: Vec<_> = tasks.iter().filter(|t| !t.completed).collect();
