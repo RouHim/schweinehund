@@ -96,13 +96,26 @@ test.describe('Mobile Viewport Interactions', () => {
   });
 
   test('task interaction works on mobile', async ({ page }) => {
-    const firstCheckbox = page.locator('.task-checkbox').first();
-    const wasChecked = await firstCheckbox.isChecked();
+    // Locate task by name (stable across re-renders)
+    const taskItem = page.locator('#tasks-list .task-item', { has: page.locator('.task-name', { hasText: '5 Min gemeinsames Aufraeumen' }) });
+    const checkbox = taskItem.locator('.task-checkbox');
+    const wasChecked = await checkbox.isChecked();
     
-    await firstCheckbox.click();
-    await page.waitForTimeout(500);
+    // Wait for toggle API response
+    const responsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/tasks/') &&
+        response.url().includes('/toggle') &&
+        response.request().method() === 'POST',
+    );
     
-    const isNowChecked = await firstCheckbox.isChecked();
+    await checkbox.click();
+    await responsePromise;
+    
+    // Re-locate task by name after DOM re-render
+    const taskItemAfter = page.locator('#tasks-list .task-item', { has: page.locator('.task-name', { hasText: '5 Min gemeinsames Aufraeumen' }) });
+    const checkboxAfter = taskItemAfter.locator('.task-checkbox');
+    const isNowChecked = await checkboxAfter.isChecked();
     expect(isNowChecked).toBe(!wasChecked);
   });
 

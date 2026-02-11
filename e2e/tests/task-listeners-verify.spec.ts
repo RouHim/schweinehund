@@ -34,17 +34,37 @@ test.describe('attachTaskListeners verification', () => {
   });
 
   test('checkbox toggle updates state', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#tasks-list .task-checkbox', { state: 'visible', timeout: 5000 });
+    await page.waitForSelector('#tasks-list .task-item', { state: 'visible', timeout: 5000 });
     
-    const checkbox = await page.locator('#tasks-list .task-checkbox').first();
+    // Locate task by name (stable across re-renders)
+    const taskItem = page.locator('#tasks-list .task-item', {
+      has: page.locator('.task-name', { hasText: 'Spuelmaschine an/aus' }),
+    });
+    
+    const checkbox = taskItem.locator('.task-checkbox');
     const initialState = await checkbox.isChecked();
     
-    await checkbox.click();
-    await page.waitForLoadState('networkidle');
+    // Wait for toggle API response
+    const responsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/tasks/') &&
+        response.url().includes('/toggle') &&
+        response.request().method() === 'POST',
+    );
     
-    const newState = await checkbox.isChecked();
-    expect(newState).not.toBe(initialState);
+    await checkbox.click();
+    await responsePromise;
+    
+    // Wait for DOM to re-render and stabilize
+    await page.waitForTimeout(100);
+    
+    // Re-locate the task (DOM was replaced by renderTasks())
+    const reloadedTask = page.locator('#tasks-list .task-item', {
+      has: page.locator('.task-name', { hasText: 'Spuelmaschine an/aus' }),
+    });
+    
+    const newState = await reloadedTask.locator('.task-checkbox').isChecked();
+    expect(newState).toBe(!initialState);
   });
 
   test('edit button opens modal', async ({ page }) => {

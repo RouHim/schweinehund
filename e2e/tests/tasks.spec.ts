@@ -58,22 +58,28 @@ test.describe('Task Management', () => {
     await expect(firstTask.locator('.task-name')).toBeVisible();
   });
 
-  test('toggles task completion state', async ({ page }) => {
-    const firstTaskItem = page.locator('#tasks-list .task-item').first();
-    const firstCheckbox = firstTaskItem.locator('.task-checkbox');
+   test('toggles task completion state', async ({ page }) => {
+     const taskName = 'Kueche grob aufraeumen';
+     const taskItem = page.locator('#tasks-list .task-item', {
+       has: page.locator('.task-name', { hasText: taskName }),
+     });
 
-    const wasChecked = await firstCheckbox.isChecked();
-    await toggleTask(firstTaskItem, page);
+     const wasChecked = await taskItem.locator('.task-checkbox').isChecked();
+     await toggleTask(taskItem, page);
 
-    const isNowChecked = await firstCheckbox.isChecked();
-    expect(isNowChecked).toBe(!wasChecked);
+     const reLocatedTaskItem = page.locator('#tasks-list .task-item', {
+       has: page.locator('.task-name', { hasText: taskName }),
+     });
 
-    if (isNowChecked) {
-      await expect(firstTaskItem).toHaveClass(/completed/);
-    } else {
-      await expect(firstTaskItem).not.toHaveClass(/completed/);
-    }
-  });
+     const isNowChecked = await reLocatedTaskItem.locator('.task-checkbox').isChecked();
+     expect(isNowChecked).toBe(!wasChecked);
+
+     if (isNowChecked) {
+       await expect(reLocatedTaskItem).toHaveClass(/completed/);
+     } else {
+       await expect(reLocatedTaskItem).not.toHaveClass(/completed/);
+     }
+   });
 
   test('persists task completion across page reload', async ({ page }) => {
     const taskName = `Persist Toggle ${Date.now()}`;
@@ -98,8 +104,12 @@ test.describe('Task Management', () => {
     await toggleTask(taskItem, page);
     await expect(taskItem.locator('.task-checkbox')).toBeChecked();
 
-    await toggleTask(taskItem, page);
-    await expect(taskItem.locator('.task-checkbox')).not.toBeChecked();
+    // Re-query task after first toggle (task moved in DOM)
+    const reQueriedTask = page.locator('#tasks-list .task-item', {
+      has: page.locator('.task-name', { hasText: taskName }),
+    });
+    await toggleTask(reQueriedTask, page);
+    await expect(reQueriedTask.locator('.task-checkbox')).not.toBeChecked();
 
     await page.reload();
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
