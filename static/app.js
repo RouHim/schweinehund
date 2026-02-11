@@ -51,6 +51,8 @@ function openModal(type, task = null) {
     const dayInput = document.getElementById('task-day-of-week');
     const intervalGroup = document.getElementById('interval-group');
     const intervalInput = document.getElementById('task-interval-weeks');
+    const startDateGroup = document.getElementById('start-date-group');
+    const startDateInput = document.getElementById('task-start-date');
     
     if (!modal || !form) return;
     
@@ -60,9 +62,11 @@ function openModal(type, task = null) {
     if (type === 'daily') {
         dayField.style.display = 'block';
         dayInput.required = true;
+        startDateGroup.style.display = 'block';
     } else {
         dayField.style.display = 'none';
         dayInput.required = false;
+        startDateGroup.style.display = 'none';
     }
     
     if (task) {
@@ -75,6 +79,8 @@ function openModal(type, task = null) {
             dayInput.value = task.day_of_week;
             intervalInput.value = task.interval_weeks || 1;
             intervalGroup.style.display = task.day_of_week === -1 ? 'none' : 'block';
+            startDateInput.value = task.start_date || '';
+            startDateGroup.style.display = task.day_of_week === -1 ? 'none' : 'block';
         }
     } else {
         title.textContent = 'Aufgabe hinzufügen';
@@ -85,11 +91,15 @@ function openModal(type, task = null) {
             dayInput.value = apiDay;
             intervalInput.value = 1;
             intervalGroup.style.display = 'block';
+            startDateInput.value = new Date().toISOString().split('T')[0];
+            startDateGroup.style.display = 'block';
         }
     }
     
     dayInput.addEventListener('change', () => {
-        intervalGroup.style.display = dayInput.value === '-1' ? 'none' : 'block';
+        const value = dayInput.value;
+        intervalGroup.style.display = value === '-1' ? 'none' : 'block';
+        startDateGroup.style.display = value === '-1' ? 'none' : 'block';
     });
     
     modal.showModal();
@@ -125,6 +135,10 @@ async function handleTaskSubmit(event) {
     if (type === 'daily') {
         data.day_of_week = parseInt(formData.get('day_of_week'));
         data.interval_weeks = parseInt(document.getElementById('task-interval-weeks').value) || 1;
+        const startDateValue = document.getElementById('task-start-date').value;
+        if (startDateValue) {
+            data.start_date = startDateValue;
+        }
     }
     
     const endpoint = type === 'daily' ? 'tasks' : 'deep-cleaning';
@@ -322,6 +336,7 @@ function renderTasks(tasks) {
                              ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
                              ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
                              ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
+                             ${task.start_date && new Date(task.start_date) > new Date() ? `<span class="badge start-date-badge">ab ${task.start_date}</span>` : ''}
                          </div>
                     </div>
                 </label>
@@ -375,6 +390,7 @@ function renderAllTasks() {
                         ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
                         ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
                         ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
+                        ${task.start_date && new Date(task.start_date) > new Date() ? `<span class="badge start-date-badge">ab ${task.start_date}</span>` : ''}
                     </div>
                 </div>
                 <div class="task-actions">

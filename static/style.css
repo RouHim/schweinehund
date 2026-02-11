@@ -1032,3 +1032,12 @@ dialog footer button.secondary:hover {
     font-size: 0.75rem;
     margin-left: 0.25rem;
 }
+
+.start-date-badge {
+    background-color: #0ea5e9;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}
