@@ -130,10 +130,14 @@ test.describe('Overview Feature', () => {
       dialog.accept();
     });
     
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/tasks/') && response.request().method() === 'DELETE'
+    );
+    
     const deleteButton = testTask.locator('[data-testid="delete-btn"]');
     await deleteButton.click();
     
-    await page.waitForLoadState('networkidle');
+    await responsePromise;
     
     const tabToday = page.locator('[data-testid="tab-today"]');
     await tabToday.click();
