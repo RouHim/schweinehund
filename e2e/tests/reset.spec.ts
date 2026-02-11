@@ -13,15 +13,18 @@ test.describe('Weekly Reset Functionality', () => {
     expect(initialCount).toBeGreaterThan(0);
     
     for (let i = 0; i < Math.min(5, initialCount); i++) {
-      const checkbox = dailyCheckboxes.nth(i);
-      const isChecked = await checkbox.isChecked();
-      if (!isChecked) {
-        await checkbox.click();
-        await page.waitForTimeout(300);
-      }
+      const checkbox = tasksList.locator('.task-checkbox:not(:checked)').first();
+      if (await checkbox.count() === 0) break;
+
+      const responsePromise = page.waitForResponse(
+        response =>
+          response.url().includes('/api/tasks/') &&
+          response.url().includes('/toggle') &&
+          response.request().method() === 'POST',
+      );
+      await checkbox.click();
+      await responsePromise;
     }
-    
-    await page.waitForTimeout(500);
     
     const checkedCountBefore = await tasksList.locator('.task-checkbox:checked').count();
     expect(checkedCountBefore).toBeGreaterThan(0);
