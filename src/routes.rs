@@ -20,6 +20,10 @@ impl reject::Reject for DatabaseError {}
 struct NotFoundError;
 impl reject::Reject for NotFoundError {}
 
+#[derive(Debug)]
+struct BadRequest;
+impl reject::Reject for BadRequest {}
+
 #[derive(Serialize)]
 struct ErrorResponse {
     message: String,
@@ -81,6 +85,11 @@ struct ReorderRequest {
     order: Vec<i64>,
 }
 
+#[derive(Deserialize)]
+struct CalendarQuery {
+    month: String,
+}
+
 fn with_db(pool: SqlitePool) -> impl Filter<Extract = (SqlitePool,), Error = Infallible> + Clone {
     warp::any().map(move || pool.clone())
 }
@@ -96,6 +105,7 @@ pub fn api_routes(
     health()
         .or(get_today_tasks(pool.clone()))
         .or(get_all_tasks(pool.clone()))
+        .or(calendar_tasks(pool.clone()))
         .or(toggle_task(pool.clone()))
         .or(get_deep_cleaning(pool.clone()))
         .or(complete_deep_task(pool.clone()))
@@ -138,6 +148,16 @@ fn get_all_tasks(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = 
         .and_then(handle_get_all_tasks)
 }
 
+fn calendar_tasks(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "tasks" / "calendar")
+        .and(warp::get())
+        .and(warp::query::<CalendarQuery>())
+        .and(with_db(pool))
+        .and_then(handle_get_calendar)
+}
+
 async fn handle_get_today_tasks(
     params: std::collections::HashMap<String, String>,
     pool: SqlitePool,
@@ -165,6 +185,32 @@ async fn handle_get_all_tasks(pool: SqlitePool) -> Result<impl Reply, Rejection>
         daily_tasks,
         deep_cleaning_tasks,
     }))
+}
+
+async fn handle_get_calendar(
+    query: CalendarQuery,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    let query_date = chrono::NaiveDate::parse_from_str(&format!("{}-01", query.month), "%Y-%m-%d")
+        .map_err(|_| reject::custom(BadRequest))?;
+
+    let now = chrono::Local::now();
+    let current_date = now.date_naive();
+    let current_month_first = chrono::NaiveDate::from_ymd_opt(current_date.year(), current_date.month(), 1)
+        .ok_or_else(|| reject::custom(DatabaseError))?;
+
+    if query_date < current_month_first {
+        return Err(reject::custom(BadRequest));
+    }
+
+    let year = query_date.year();
+    let month = query_date.month();
+
+    let calendar = db::get_tasks_for_month(&pool, year, month)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&calendar))
 }
 
 fn toggle_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -636,6 +682,13 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
                 message: "Resource not found".to_string(),
             }),
             StatusCode::NOT_FOUND,
+        ))
+    } else if err.find::<BadRequest>().is_some() {
+        Ok(warp::reply::with_status(
+            warp::reply::json(&ErrorResponse {
+                message: "Bad request".to_string(),
+            }),
+            StatusCode::BAD_REQUEST,
         ))
     } else if err.find::<DatabaseError>().is_some() {
         Ok(warp::reply::with_status(
