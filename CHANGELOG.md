@@ -1,3 +1,13 @@
+# [1.6.0](https://github.com/RouHim/schweinehund/compare/v1.5.0...v1.6.0) (2026-02-11)
+
+
+### Features
+
+* **db:** add get_tasks_for_month calendar query function ([b08421a](https://github.com/RouHim/schweinehund/commit/b08421ae37c729235f34e6578116eb0aa34511a8))
+* **routes:** add GET /api/tasks/calendar endpoint ([75eaaf2](https://github.com/RouHim/schweinehund/commit/75eaaf24006777d968818550c25f204da0969cca))
+* **ui:** add calendar tab and CSS grid layout ([c1fac5c](https://github.com/RouHim/schweinehund/commit/c1fac5cf47f9d7ca98dd764c2ce2674ddc952aaf))
+* **ui:** implement calendar JavaScript logic ([72f8b81](https://github.com/RouHim/schweinehund/commit/72f8b815177011394316d8caf1ba8d282776974b))
+
 # [1.5.0](https://github.com/RouHim/schweinehund/compare/v1.4.0...v1.5.0) (2026-02-11)
 
 
