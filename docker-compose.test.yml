@@ -1,0 +1,6 @@
+services:
+  ntfy:
+    image: docker.io/binwiederhier/ntfy
+    command: serve --base-url=http://localhost:8199
+    ports:
+      - "8199:80"
