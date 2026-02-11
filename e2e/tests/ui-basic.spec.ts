@@ -96,10 +96,9 @@ test.describe('Schweinehund UI Basic Tests', () => {
     const htmlElement = page.locator('html');
     const initialTheme = await htmlElement.getAttribute('data-theme');
     
-    await themeToggle.click();
-    await page.waitForTimeout(300);
+    const expectedTheme = initialTheme === 'dark' ? 'light' : 'dark';
     
-    const newTheme = await htmlElement.getAttribute('data-theme');
-    expect(newTheme).not.toBe(initialTheme);
+    await themeToggle.click();
+    await expect(htmlElement).toHaveAttribute('data-theme', expectedTheme);
   });
 });
