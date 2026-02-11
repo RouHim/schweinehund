@@ -57,13 +57,25 @@ pub struct AppSettings {
     pub notification_time: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CalendarTask {
+    pub name: String,
+    pub zone: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CalendarDay {
+    pub date: String,
+    pub tasks: Vec<CalendarTask>,
+}
+
 /// Get tasks for today: mini-routine (day_of_week = -1) + today's zone tasks
 pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<DailyTask>> {
     let current_date = chrono::Local::now().date_naive();
     get_today_tasks_for_date(pool, day_of_week, current_date).await
 }
 
-async fn get_today_tasks_for_date(
+pub async fn get_today_tasks_for_date(
     pool: &SqlitePool,
     day_of_week: i64,
     current_date: chrono::NaiveDate,
@@ -110,6 +122,65 @@ async fn get_today_tasks_for_date(
         .collect();
 
     Ok(filtered_tasks)
+}
+
+/// Get tasks for each day in a given month (for calendar view)
+pub async fn get_tasks_for_month(
+    pool: &SqlitePool,
+    year: i32,
+    month: u32,
+) -> Result<Vec<CalendarDay>> {
+    use chrono::Datelike;
+
+    let first_day = chrono::NaiveDate::from_ymd_opt(year, month, 1)
+        .ok_or_else(|| anyhow::anyhow!("Invalid year/month: {}/{}", year, month))?;
+
+    let next_month = if month == 12 {
+        chrono::NaiveDate::from_ymd_opt(year + 1, 1, 1)
+    } else {
+        chrono::NaiveDate::from_ymd_opt(year, month + 1, 1)
+    }
+    .ok_or_else(|| anyhow::anyhow!("Invalid next month calculation"))?;
+
+    let last_day = next_month
+        .pred_opt()
+        .ok_or_else(|| anyhow::anyhow!("Invalid last day calculation"))?;
+
+    let mut calendar = Vec::new();
+    let mut current = first_day;
+
+    while current <= last_day {
+        let day_of_week = match current.weekday() {
+            chrono::Weekday::Mon => 1,
+            chrono::Weekday::Tue => 2,
+            chrono::Weekday::Wed => 3,
+            chrono::Weekday::Thu => 4,
+            chrono::Weekday::Fri => 5,
+            chrono::Weekday::Sat => 6,
+            chrono::Weekday::Sun => 7,
+        };
+
+        let daily_tasks = get_today_tasks_for_date(pool, day_of_week, current).await?;
+
+        let calendar_tasks: Vec<CalendarTask> = daily_tasks
+            .into_iter()
+            .map(|t| CalendarTask {
+                name: t.name,
+                zone: t.zone,
+            })
+            .collect();
+
+        calendar.push(CalendarDay {
+            date: current.format("%Y-%m-%d").to_string(),
+            tasks: calendar_tasks,
+        });
+
+        current = current
+            .succ_opt()
+            .ok_or_else(|| anyhow::anyhow!("Invalid date increment"))?;
+    }
+
+    Ok(calendar)
 }
 
 /// Get all daily tasks (both mini-routines and regular weekday tasks)
@@ -1384,6 +1455,172 @@ pub mod tests {
         let task_after = get_daily_task_by_id(&pool, task.id).await?;
         assert!(!task_after.completed);
         assert!(task_after.completed_at.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_mini_routine_every_day() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a mini-routine task (-1 day_of_week)
+        let result = sqlx::query(
+            r#"
+            INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+            VALUES (?, NULL, 'Kitchen', -1, 0, NULL, 1, NULL)
+            "#,
+        )
+        .bind("Mini routine test")
+        .execute(&pool)
+        .await?;
+        let _task_id = result.last_insert_rowid();
+
+        // Get tasks for February 2026 (28 days)
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        assert_eq!(calendar.len(), 28, "February 2026 should have 28 days");
+
+        // Mini-routine should appear on every single day
+        for day in &calendar {
+            let mini_routines: Vec<_> = day
+                .tasks
+                .iter()
+                .filter(|t| t.name == "Mini routine test")
+                .collect();
+            assert_eq!(
+                mini_routines.len(),
+                1,
+                "Mini routine should appear on {}",
+                day.date
+            );
+            assert_eq!(mini_routines[0].zone.as_deref(), Some("Kitchen"));
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_monday_only() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a Monday-only task (day_of_week=1)
+        let _task = create_daily_task(
+            &pool,
+            "Monday only",
+            None,
+            Some("Bathroom"),
+            1,
+            1,
+            "2026-01-01",
+        )
+        .await?;
+
+        // Get tasks for February 2026
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        // Count how many days have this task
+        let mut monday_count = 0;
+        for day in &calendar {
+            if day.tasks.iter().any(|t| t.name == "Monday only") {
+                monday_count += 1;
+            }
+        }
+
+        // February 2026 starts on Sunday, so Mondays are: 2, 9, 16, 23
+        assert_eq!(monday_count, 4, "Should have 4 Mondays in February 2026");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_biweekly_due_weeks() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a biweekly Monday task starting 2026-02-02 (first Monday of Feb 2026)
+        let _task = create_daily_task(
+            &pool,
+            "Biweekly Monday",
+            None,
+            Some("Living Room"),
+            1,
+            2,
+            "2026-02-02",
+        )
+        .await?;
+
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        let mut biweekly_count = 0;
+        for day in &calendar {
+            if day.tasks.iter().any(|t| t.name == "Biweekly Monday") {
+                biweekly_count += 1;
+            }
+        }
+
+        // Biweekly starting Feb 2: should appear on Feb 2 and Feb 16
+        assert_eq!(
+            biweekly_count, 2,
+            "Biweekly task should appear on 2 Mondays in February 2026"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_future_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create task with start_date in middle of February
+        let _task = create_daily_task(
+            &pool,
+            "Future start",
+            None,
+            None,
+            3, // Wednesday
+            1,
+            "2026-02-18",
+        )
+        .await?;
+
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        // Count appearances
+        let mut count = 0;
+        for day in &calendar {
+            if day.tasks.iter().any(|t| t.name == "Future start") {
+                count += 1;
+            }
+        }
+
+        // Wednesdays in Feb 2026: 4, 11, 18, 25
+        // But start_date is 2026-02-18, so only 18 and 25 should show
+        assert_eq!(
+            count, 2,
+            "Task should only appear on Wednesdays on/after start_date"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_boundary_handling() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Test different month lengths
+        let jan = get_tasks_for_month(&pool, 2026, 1).await?;
+        assert_eq!(jan.len(), 31, "January should have 31 days");
+
+        let feb = get_tasks_for_month(&pool, 2026, 2).await?;
+        assert_eq!(feb.len(), 28, "February 2026 should have 28 days");
+
+        let apr = get_tasks_for_month(&pool, 2026, 4).await?;
+        assert_eq!(apr.len(), 30, "April should have 30 days");
+
+        // Verify date format
+        assert_eq!(jan[0].date, "2026-01-01");
+        assert_eq!(jan[30].date, "2026-01-31");
+        assert_eq!(feb[0].date, "2026-02-01");
+        assert_eq!(feb[27].date, "2026-02-28");
 
         Ok(())
     }
