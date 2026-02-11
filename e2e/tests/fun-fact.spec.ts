@@ -34,13 +34,15 @@ test.describe('Fun Fact Popup', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible' });
-    await page.request.post('/api/debug/reset-all');
+    const response = await page.request.post('/api/debug/reset-all');
+    expect(response.ok()).toBeTruthy();
     await page.reload();
     await page.waitForSelector('#tasks-list', { state: 'visible' });
   });
 
   test.afterEach(async ({ page }) => {
-    await page.request.post('/api/debug/reset-all');
+    const response = await page.request.post('/api/debug/reset-all');
+    expect(response.ok()).toBeTruthy();
   });
 
   test('shows fun-fact popup after completing all daily tasks', async ({ page }) => {

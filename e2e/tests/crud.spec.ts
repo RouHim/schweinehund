@@ -4,7 +4,8 @@ test.describe('CRUD Operations - Daily Tasks', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
-    await page.request.post('/api/debug/reset-all');
+    const response = await page.request.post('/api/debug/reset-all');
+    expect(response.ok()).toBeTruthy();
     await page.reload();
     await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
   });
@@ -139,7 +140,8 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
-    await page.request.post('/api/debug/reset-all');
+    const response = await page.request.post('/api/debug/reset-all');
+    expect(response.ok()).toBeTruthy();
     await page.reload();
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
   });

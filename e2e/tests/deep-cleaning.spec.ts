@@ -68,7 +68,8 @@ test.describe('Deep Cleaning Queue', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
-    await page.request.post('/api/debug/reset-all');
+    const response = await page.request.post('/api/debug/reset-all');
+    expect(response.ok()).toBeTruthy();
     await page.reload();
     await page.waitForSelector('#deep-cleaning-list', { state: 'visible', timeout: 5000 });
   });
