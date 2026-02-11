@@ -32,6 +32,7 @@
     <nav class="tab-bar">
         <button data-tab="today" data-testid="tab-today" class="tab active">Heute</button>
         <button data-tab="all" data-testid="tab-all" class="tab">Alle Aufgaben</button>
+        <button data-tab="calendar" data-testid="tab-calendar" class="tab">Kalender</button>
     </nav>
 
     <main class="container">
@@ -162,6 +163,17 @@
         
         <h2>Grundreinigung</h2>
         <ul id="all-deep-tasks-list" class="task-list" data-testid="all-deep-tasks-list"></ul>
+    </section>
+
+    <section id="calendar-section" data-testid="calendar-section" style="display:none;">
+        <div class="calendar-controls">
+            <button id="calendar-prev-btn" class="calendar-nav-btn" data-testid="calendar-prev-btn" aria-label="Vorheriger Monat">‹</button>
+            <h2 id="calendar-month-label" data-testid="calendar-month-label">Januar 2026</h2>
+            <button id="calendar-next-btn" class="calendar-nav-btn" data-testid="calendar-next-btn" aria-label="Nächster Monat">›</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid" data-testid="calendar-grid">
+            <!-- Populated by JavaScript -->
+        </div>
     </section>
 
     <script src="/vendor/sortable.min.js"></script>
