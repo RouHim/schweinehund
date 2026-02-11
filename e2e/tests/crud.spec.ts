@@ -128,10 +128,7 @@ test.describe('CRUD Operations - Daily Tasks', () => {
     
     await responsePromise;
     
-    await page.waitForLoadState('networkidle');
-    
-    const updatedCount = await tasksList.locator('.task-item').count();
-    expect(updatedCount).toBe(initialCount - 1);
+    await expect(tasksList.locator('.task-item')).toHaveCount(initialCount - 1);
     
     const deletedTask = tasksList.locator('.task-name', { hasText: taskName || '' });
     await expect(deletedTask).not.toBeVisible();
@@ -222,7 +219,6 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     await page.locator('[data-testid="modal-save-btn"]').click();
     
     await responsePromise;
-    await page.waitForLoadState('networkidle');
     
     await expect(modal).not.toBeVisible({ timeout: 10000 });
     
@@ -252,10 +248,7 @@ test.describe('CRUD Operations - Deep Cleaning Tasks', () => {
     
     await responsePromise;
     
-    await page.waitForLoadState('networkidle');
-    
-    const updatedCount = await deepCleaningList.locator('.task-item').count();
-    expect(updatedCount).toBe(initialCount - 1);
+    await expect(deepCleaningList.locator('.task-item')).toHaveCount(initialCount - 1);
     
     const deletedTask = deepCleaningList.locator('.task-name', { hasText: taskName || '' });
     await expect(deletedTask).not.toBeVisible();
