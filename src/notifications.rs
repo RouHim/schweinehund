@@ -83,6 +83,12 @@ pub struct NtfyClient {
     server: String,
 }
 
+impl Default for NtfyClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NtfyClient {
     /// Create a new ntfy client with configuration from environment
     pub fn new() -> Self {

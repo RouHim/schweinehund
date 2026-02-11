@@ -2,11 +2,10 @@ use std::net::SocketAddr;
 use tracing_subscriber::EnvFilter;
 use warp::Filter;
 
-mod assets;
-mod db;
-mod notifications;
-mod routes;
-mod scheduler;
+use schweinehund::assets;
+use schweinehund::db;
+use schweinehund::routes;
+use schweinehund::scheduler;
 
 #[cfg(target_env = "musl")]
 #[global_allocator]

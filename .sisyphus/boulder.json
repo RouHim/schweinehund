@@ -1,9 +1,9 @@
 {
-  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/fix-e2e-tests.md",
-  "started_at": "2026-02-10T09:58:46.333Z",
+  "active_plan": "/home/rouven/projects/schweinehund/.sisyphus/plans/ntfy-notification-tests.md",
+  "started_at": "2026-02-11T11:45:32.837Z",
   "session_ids": [
-    "ses_3b9323bfbffeVtXLGVwCaqQLvF"
+    "ses_3b37aa967ffeWqhunUMzcM7zDj"
   ],
-  "plan_name": "fix-e2e-tests",
+  "plan_name": "ntfy-notification-tests",
   "agent": "atlas"
 }

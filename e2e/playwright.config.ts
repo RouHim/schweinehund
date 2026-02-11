@@ -46,15 +46,16 @@ export default defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'cargo run',
-    cwd: '..',
-    port: 9666,
-    reuseExistingServer: !process.env.CI,
-    env: {
-      DATABASE_URL: process.env.DATABASE_URL ?? 'sqlite:data/schweinehund.db',
-      NTFY_TOPIC: 'schweinehund-e2e-test',
-    },
-  },
+   /* Run your local dev server before starting the tests */
+   webServer: {
+     command: 'cargo run',
+     cwd: '..',
+     port: 9666,
+     reuseExistingServer: !process.env.CI,
+     env: {
+       DATABASE_URL: process.env.DATABASE_URL ?? 'sqlite:data/schweinehund.db',
+       NTFY_TOPIC: 'schweinehund-e2e-test',
+       NTFY_SERVER: process.env.NTFY_SERVER ?? 'http://localhost:8199',
+     },
+   },
 });

@@ -61,6 +61,7 @@ jobs:
         env:
           DATABASE_URL: sqlite:test.db
           NTFY_TOPIC: schweinehund-ci-${{ github.run_id }}
+          NTFY_SERVER: http://localhost:1
         run: |
           cd e2e
           npx playwright test
