@@ -1,3 +1,12 @@
+# [1.5.0](https://github.com/RouHim/schweinehund/compare/v1.4.0...v1.5.0) (2026-02-11)
+
+
+### Features
+
+* **api:** accept user-provided start_date in task create/update endpoints ([3fabc94](https://github.com/RouHim/schweinehund/commit/3fabc94752066fc47076006558306d682743731a))
+* **db:** add start_date filtering to hide future-dated tasks from today view ([bd491ae](https://github.com/RouHim/schweinehund/commit/bd491ae63a99ef08622d9562473c1d264ebd1ae7))
+* **ui:** add start date picker to task modal with future-date badge ([3467501](https://github.com/RouHim/schweinehund/commit/3467501ed9767c08d1f02e69c27a740e920ef4e3))
+
 # [1.4.0](https://github.com/RouHim/schweinehund/compare/v1.3.0...v1.4.0) (2026-02-11)
 
 
