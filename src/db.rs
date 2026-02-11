@@ -1268,8 +1268,7 @@ pub mod tests {
         let pool = setup_test_db().await?;
 
         // Create a weekly task with past start_date
-        let task =
-            create_daily_task(&pool, "Past weekly", None, None, 1, 1, "2026-02-09").await?;
+        let task = create_daily_task(&pool, "Past weekly", None, None, 1, 1, "2026-02-09").await?;
 
         // Query for tasks AFTER start_date
         let after_start = chrono::NaiveDate::from_ymd_opt(2026, 2, 16).unwrap(); // Monday Feb 16
@@ -1311,8 +1310,7 @@ pub mod tests {
     async fn test_update_daily_task_with_start_date() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task =
-            create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09").await?;
+        let task = create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09").await?;
 
         let updated = update_daily_task(
             &pool,
@@ -1336,8 +1334,7 @@ pub mod tests {
     async fn test_update_daily_task_preserves_start_date_when_none() -> Result<()> {
         let pool = setup_test_db().await?;
 
-        let task =
-            create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09").await?;
+        let task = create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09").await?;
 
         let updated =
             update_daily_task(&pool, task.id, "Updated name", None, None, 1, 1, None).await?;
@@ -1352,8 +1349,7 @@ pub mod tests {
         let pool = setup_test_db().await?;
 
         // Create weekly task with future start_date
-        let task =
-            create_daily_task(&pool, "Future task", None, None, 1, 1, "2026-02-20").await?;
+        let task = create_daily_task(&pool, "Future task", None, None, 1, 1, "2026-02-20").await?;
 
         // Complete the task
         toggle_task(&pool, task.id).await?;
@@ -1375,8 +1371,7 @@ pub mod tests {
         let pool = setup_test_db().await?;
 
         // Create weekly task with past start_date
-        let task =
-            create_daily_task(&pool, "Past task", None, None, 1, 1, "2026-02-09").await?;
+        let task = create_daily_task(&pool, "Past task", None, None, 1, 1, "2026-02-09").await?;
 
         // Complete the task
         toggle_task(&pool, task.id).await?;
