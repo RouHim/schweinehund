@@ -1,3 +1,29 @@
+# [1.4.0](https://github.com/RouHim/schweinehund/compare/v1.3.0...v1.4.0) (2026-02-11)
+
+
+### Bug Fixes
+
+* **db:** update SELECT queries to include interval_weeks and start_date columns ([04a7dd6](https://github.com/RouHim/schweinehund/commit/04a7dd6c5ae33aff6f00ba765bb7959280f9c3d9))
+* **e2e:** add database reset to all test files for state isolation ([cf9bfd1](https://github.com/RouHim/schweinehund/commit/cf9bfd1cd0145abc4c65ef4363a3d00389fefc9f))
+* **e2e:** expose handleDragReorder and attachTaskListeners on window ([b3a5db0](https://github.com/RouHim/schweinehund/commit/b3a5db0bb4badfedc926a887d2f63af5e25d604f))
+* **e2e:** replace stale DOM locators with name-based selectors ([004640c](https://github.com/RouHim/schweinehund/commit/004640c60789aa544b5813e0a1b860ec0bad1dc8))
+* **frontend:** add missing attachTaskListeners function and remove arrow reorder buttons ([150ce7d](https://github.com/RouHim/schweinehund/commit/150ce7d34689a2709012caafb9c9b08a709f0a86))
+* **fun-fact:** restore popup trigger and stabilize e2e completion flow ([54bbdb3](https://github.com/RouHim/schweinehund/commit/54bbdb3d53bde18d32c52e08aac43bdf26aba31d))
+
+
+### Features
+
+* **api:** accept interval_weeks in task create/update with validation ([ca35973](https://github.com/RouHim/schweinehund/commit/ca35973914ce815b0b01d80b70450e5f5eb4572f))
+* **api:** add full database reset endpoint for E2E test isolation ([3bf4914](https://github.com/RouHim/schweinehund/commit/3bf4914c6c85bad3b844345944523a462f551238))
+* **api:** add GET /api/tasks/all endpoint for overview ([1fc70fc](https://github.com/RouHim/schweinehund/commit/1fc70fcf048f83a7975e4d7c8c96e5d5befa04b0))
+* **db:** add interval_weeks and start_date columns to daily_tasks ([289e86f](https://github.com/RouHim/schweinehund/commit/289e86fbcaef8510c2d7040b2afef5c8f5324613))
+* **db:** filter today's tasks by interval_weeks ([e72a9d7](https://github.com/RouHim/schweinehund/commit/e72a9d7ec886decdb287592db4dabdee576fa5f1))
+* **frontend:** add drag-and-drop reorder for deep cleaning tasks ([ea3914e](https://github.com/RouHim/schweinehund/commit/ea3914ee2dea71700fe5984dd5da0ba866a0c112))
+* **frontend:** vendor SortableJS for drag-and-drop support ([cca4dc9](https://github.com/RouHim/schweinehund/commit/cca4dc9b9d403471cbe5a7599e156a8be7803305))
+* **scheduler:** make daily task reset interval-aware ([8a5d264](https://github.com/RouHim/schweinehund/commit/8a5d26472cc7ad41ba4f3f7c31e72d0b17106eb6))
+* **ui:** add interval picker to daily task modal ([7467637](https://github.com/RouHim/schweinehund/commit/7467637e02003f3e6c3a8ded8d26fd031fb09b75))
+* **ui:** add tab-bar navigation and all-tasks overview view ([ac13690](https://github.com/RouHim/schweinehund/commit/ac1369042ece30e4f10639168ee738f9b2589ac8))
+
 # [1.3.0](https://github.com/RouHim/schweinehund/compare/v1.2.0...v1.3.0) (2026-02-09)
 
 
