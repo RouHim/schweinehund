@@ -7,7 +7,9 @@ use sqlx::FromRow;
 
 /// Initialize SQLite connection pool with WAL mode and optimized settings
 pub async fn init_pool(database_url: &str) -> Result<SqlitePool> {
-    let options = SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
+    let options = SqliteConnectOptions::from_str(database_url)?
+        .create_if_missing(true)
+        .busy_timeout(std::time::Duration::from_secs(5));
 
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
@@ -641,9 +643,13 @@ pub async fn reorder_deep_cleaning_queue(
 
 /// Reset all data to initial seed state
 pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
-    sqlx::query("DELETE FROM daily_tasks").execute(pool).await?;
+    let mut tx = pool.begin().await?;
+
+    sqlx::query("DELETE FROM daily_tasks")
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM deep_cleaning_tasks")
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
 
     sqlx::query(
@@ -656,7 +662,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('Oberflaechen frei machen', 'Oberflächen von Gegenständen befreien', NULL, -1, 0, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -668,7 +674,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('Boden: nur WISCHEN', 'Boden wischen (nicht saugen)', 'EG - Wohnbereich/Kueche/WC', 1, 0, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -679,7 +685,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('1 Ecke / 1 Regal ordnen', 'Eine Ecke oder ein Regal organisieren', 'KG - Keller/Waschen', 2, 0, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -691,7 +697,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('Saugen', 'Saugen und Böden reinigen', '1.OG - Schlaf/Kind/Bad', 3, 0, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -702,7 +708,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('Dinge zuruecklegen', 'Gegenstände an ihren Platz zurückbringen', NULL, 4, 0, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -714,7 +720,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('Bad-Check (Handtuecher, WC)', 'Badezimmer kontrollieren: Handtücher, WC säubern', '1.OG - Schlaf/Kind/Bad', 5, 0, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -726,7 +732,7 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         ('Schrank/Spielzeug aussortieren', 'Schrank oder Spielzeug sortieren und entrümpeln', 4, NULL)
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -736,9 +742,10 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         WHERE key = 'last_reset_at'
         "#,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
+    tx.commit().await?;
     Ok(())
 }
 

@@ -568,9 +568,10 @@ fn debug_reset_all(
 }
 
 async fn handle_debug_reset_all(pool: SqlitePool) -> Result<impl Reply, Rejection> {
-    db::reset_all_data(&pool)
-        .await
-        .map_err(|_| reject::custom(DatabaseError))?;
+    db::reset_all_data(&pool).await.map_err(|e| {
+        tracing::error!("reset_all_data failed: {e}");
+        reject::custom(DatabaseError)
+    })?;
 
     Ok(warp::reply::json(&SuccessResponse {
         message: "All data reset to initial seed state successfully".to_string(),
