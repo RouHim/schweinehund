@@ -34,13 +34,13 @@ test.describe('Fun Fact Popup', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('#tasks-list', { state: 'visible' });
-    await page.evaluate(() => fetch('/api/debug/reset-all', { method: 'POST' }));
+    await page.request.post('/api/debug/reset-all');
     await page.reload();
     await page.waitForSelector('#tasks-list', { state: 'visible' });
   });
 
   test.afterEach(async ({ page }) => {
-    await page.evaluate(() => fetch('/api/debug/reset-all', { method: 'POST' }));
+    await page.request.post('/api/debug/reset-all');
   });
 
   test('shows fun-fact popup after completing all daily tasks', async ({ page }) => {
@@ -50,7 +50,17 @@ test.describe('Fun Fact Popup', () => {
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count - 1; i++) {
-      await checkboxes.nth(i).check();
+      const unchecked = page.locator('#tasks-list .task-checkbox:not(:checked)').first();
+      if (await unchecked.count() === 0) break;
+
+      const responsePromise = page.waitForResponse(
+        response =>
+          response.url().includes('/api/tasks/') &&
+          response.url().includes('/toggle') &&
+          response.request().method() === 'POST',
+      );
+      await unchecked.click();
+      await responsePromise;
     }
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
@@ -68,9 +78,7 @@ test.describe('Fun Fact Popup', () => {
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
 
-    await page.waitForTimeout(15500);
-
-    await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible({ timeout: 16000 });
   });
 
   test('fun-fact popup can be closed manually', async ({ page }) => {
@@ -89,8 +97,14 @@ test.describe('Fun Fact Popup', () => {
 
     expect(count).toBeGreaterThan(1);
 
+    const responsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/tasks/') &&
+        response.url().includes('/toggle') &&
+        response.request().method() === 'POST',
+    );
     await checkboxes.first().check();
-    await page.waitForTimeout(1000);
+    await responsePromise;
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
   });
@@ -134,8 +148,14 @@ test.describe('Fun Fact Popup', () => {
     await expect(page.locator('[data-testid="fun-fact-modal"]')).toBeVisible();
     await page.locator('[data-testid="fun-fact-close-btn"]').click();
 
+    const responsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/tasks/') &&
+        response.url().includes('/toggle') &&
+        response.request().method() === 'POST',
+    );
     await checkboxes.first().uncheck();
-    await page.waitForTimeout(1000);
+    await responsePromise;
 
     await expect(page.locator('[data-testid="fun-fact-modal"]')).not.toBeVisible();
   });
