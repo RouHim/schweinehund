@@ -196,8 +196,9 @@ async fn handle_get_calendar(
 
     let now = chrono::Local::now();
     let current_date = now.date_naive();
-    let current_month_first = chrono::NaiveDate::from_ymd_opt(current_date.year(), current_date.month(), 1)
-        .ok_or_else(|| reject::custom(DatabaseError))?;
+    let current_month_first =
+        chrono::NaiveDate::from_ymd_opt(current_date.year(), current_date.month(), 1)
+            .ok_or_else(|| reject::custom(DatabaseError))?;
 
     if query_date < current_month_first {
         return Err(reject::custom(BadRequest));

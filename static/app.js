@@ -181,7 +181,10 @@ const state = {
     settings: null,
     allDailyTasks: [],
     allDeepTasks: [],
-    hasLoadedTodayTasks: false
+    hasLoadedTodayTasks: false,
+    calendarData: null,
+    calendarMonth: null,
+    calendarYear: null
 };
 
 function initTheme() {
@@ -279,16 +282,20 @@ function switchTab(tabName) {
     const deepSection = document.getElementById('deep-cleaning-section');
     const settingsSection = document.getElementById('settings-section');
     const allTasksSection = document.getElementById('all-tasks-section');
+    const calendarSection = document.getElementById('calendar-section');
     const todayTab = document.querySelector('[data-tab="today"]');
     const allTab = document.querySelector('[data-tab="all"]');
+    const calendarTab = document.querySelector('[data-tab="calendar"]');
     
     if (tabName === 'today') {
         todaySection.style.display = 'block';
         deepSection.style.display = 'block';
         if (settingsSection) settingsSection.style.display = 'block';
         allTasksSection.style.display = 'none';
+        if (calendarSection) calendarSection.style.display = 'none';
         todayTab.classList.add('active');
         allTab.classList.remove('active');
+        if (calendarTab) calendarTab.classList.remove('active');
         
         fetchTodayTasks();
         fetchDeepCleaning();
@@ -297,10 +304,23 @@ function switchTab(tabName) {
         deepSection.style.display = 'none';
         if (settingsSection) settingsSection.style.display = 'none';
         allTasksSection.style.display = 'block';
+        if (calendarSection) calendarSection.style.display = 'none';
         todayTab.classList.remove('active');
         allTab.classList.add('active');
+        if (calendarTab) calendarTab.classList.remove('active');
         
         fetchAllTasks();
+    } else if (tabName === 'calendar') {
+        todaySection.style.display = 'none';
+        deepSection.style.display = 'none';
+        if (settingsSection) settingsSection.style.display = 'none';
+        allTasksSection.style.display = 'none';
+        if (calendarSection) calendarSection.style.display = 'block';
+        todayTab.classList.remove('active');
+        allTab.classList.remove('active');
+        if (calendarTab) calendarTab.classList.add('active');
+        
+        fetchCalendar();
     }
 }
 
@@ -848,9 +868,134 @@ function closeFunFactModal() {
     }
 }
 
+async function fetchCalendar(year = null, month = null) {
+    const now = new Date();
+    const targetYear = year || now.getFullYear();
+    const targetMonth = month || (now.getMonth() + 1);
+    
+    state.calendarYear = targetYear;
+    state.calendarMonth = targetMonth;
+    
+    const monthStr = `${targetYear}-${targetMonth.toString().padStart(2, '0')}`;
+    
+    try {
+        const response = await fetch(`${API_BASE}/tasks/calendar?month=${monthStr}`);
+        if (!response.ok) {
+            throw new Error(`Kalender konnte nicht geladen werden: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        state.calendarData = data;
+        
+        renderCalendar();
+    } catch (error) {
+        console.error('Fehler beim Laden des Kalenders:', error);
+    }
+}
+
+function renderCalendar() {
+    const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    const monthLabel = document.getElementById('calendar-month-label');
+    const grid = document.getElementById('calendar-grid');
+    const prevBtn = document.getElementById('calendar-prev-btn');
+    
+    if (!monthLabel || !grid) return;
+    
+    const year = state.calendarYear;
+    const month = state.calendarMonth;
+    
+    monthLabel.textContent = `${monthNames[month - 1]} ${year}`;
+    
+    // Disable prev button if showing current month
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    if (prevBtn) {
+        prevBtn.disabled = (year === currentYear && month === currentMonth);
+    }
+    
+    // Week header: Mo-So
+    const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    let html = weekdays.map(day => `<div class="calendar-weekday">${day}</div>`).join('');
+    
+    // Calculate first day of month (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    // Convert to Monday = 0, ..., Sunday = 6
+    const firstDayMonday = (firstDay === 0) ? 6 : firstDay - 1;
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDayMonday; i++) {
+        html += '<div class="calendar-day calendar-day-empty"></div>';
+    }
+    
+    // Get number of days in month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    // Create calendar data lookup
+    const calendarMap = {};
+    if (state.calendarData && Array.isArray(state.calendarData)) {
+        state.calendarData.forEach(entry => {
+            calendarMap[entry.date] = entry.tasks || [];
+        });
+    }
+    
+    // Render day cells
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        const tasks = calendarMap[dateStr] || [];
+        
+        // Check if this is today
+        const isToday = (year === currentYear && month === currentMonth && day === now.getDate());
+        const todayClass = isToday ? ' today' : '';
+        
+        html += `
+            <div class="calendar-day${todayClass}" data-testid="calendar-day-${dateStr}">
+                <div class="calendar-day-number">${day}</div>
+                ${tasks.map(task => `<div class="calendar-task-name">${escapeHtml(task.name)}</div>`).join('')}
+            </div>
+        `;
+    }
+    
+    grid.innerHTML = html;
+}
+
+function initCalendarListeners() {
+    const prevBtn = document.getElementById('calendar-prev-btn');
+    const nextBtn = document.getElementById('calendar-next-btn');
+    
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            let year = state.calendarYear;
+            let month = state.calendarMonth - 1;
+            
+            if (month < 1) {
+                month = 12;
+                year--;
+            }
+            
+            fetchCalendar(year, month);
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            let year = state.calendarYear;
+            let month = state.calendarMonth + 1;
+            
+            if (month > 12) {
+                month = 1;
+                year++;
+            }
+            
+            fetchCalendar(year, month);
+        });
+    }
+}
+
 function init() {
     initTheme();
     initModal();
+    initCalendarListeners();
     
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
