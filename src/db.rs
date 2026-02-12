@@ -59,13 +59,25 @@ pub struct AppSettings {
     pub notification_time: String,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CalendarTask {
+    pub name: String,
+    pub zone: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CalendarDay {
+    pub date: String,
+    pub tasks: Vec<CalendarTask>,
+}
+
 /// Get tasks for today: mini-routine (day_of_week = -1) + today's zone tasks
 pub async fn get_today_tasks(pool: &SqlitePool, day_of_week: i64) -> Result<Vec<DailyTask>> {
     let current_date = chrono::Local::now().date_naive();
     get_today_tasks_for_date(pool, day_of_week, current_date).await
 }
 
-async fn get_today_tasks_for_date(
+pub async fn get_today_tasks_for_date(
     pool: &SqlitePool,
     day_of_week: i64,
     current_date: chrono::NaiveDate,
@@ -85,6 +97,17 @@ async fn get_today_tasks_for_date(
     let filtered_tasks = tasks
         .into_iter()
         .filter(|task| {
+            if let Some(start_date) = task.start_date.as_deref() {
+                let start = match chrono::NaiveDate::parse_from_str(start_date, "%Y-%m-%d") {
+                    Ok(date) => date,
+                    Err(_) => return true,
+                };
+
+                if current_date < start {
+                    return false;
+                }
+            }
+
             if task.day_of_week == -1 {
                 return true;
             }
@@ -101,6 +124,65 @@ async fn get_today_tasks_for_date(
         .collect();
 
     Ok(filtered_tasks)
+}
+
+/// Get tasks for each day in a given month (for calendar view)
+pub async fn get_tasks_for_month(
+    pool: &SqlitePool,
+    year: i32,
+    month: u32,
+) -> Result<Vec<CalendarDay>> {
+    use chrono::Datelike;
+
+    let first_day = chrono::NaiveDate::from_ymd_opt(year, month, 1)
+        .ok_or_else(|| anyhow::anyhow!("Invalid year/month: {}/{}", year, month))?;
+
+    let next_month = if month == 12 {
+        chrono::NaiveDate::from_ymd_opt(year + 1, 1, 1)
+    } else {
+        chrono::NaiveDate::from_ymd_opt(year, month + 1, 1)
+    }
+    .ok_or_else(|| anyhow::anyhow!("Invalid next month calculation"))?;
+
+    let last_day = next_month
+        .pred_opt()
+        .ok_or_else(|| anyhow::anyhow!("Invalid last day calculation"))?;
+
+    let mut calendar = Vec::new();
+    let mut current = first_day;
+
+    while current <= last_day {
+        let day_of_week = match current.weekday() {
+            chrono::Weekday::Mon => 1,
+            chrono::Weekday::Tue => 2,
+            chrono::Weekday::Wed => 3,
+            chrono::Weekday::Thu => 4,
+            chrono::Weekday::Fri => 5,
+            chrono::Weekday::Sat => 6,
+            chrono::Weekday::Sun => 7,
+        };
+
+        let daily_tasks = get_today_tasks_for_date(pool, day_of_week, current).await?;
+
+        let calendar_tasks: Vec<CalendarTask> = daily_tasks
+            .into_iter()
+            .map(|t| CalendarTask {
+                name: t.name,
+                zone: t.zone,
+            })
+            .collect();
+
+        calendar.push(CalendarDay {
+            date: current.format("%Y-%m-%d").to_string(),
+            tasks: calendar_tasks,
+        });
+
+        current = current
+            .succ_opt()
+            .ok_or_else(|| anyhow::anyhow!("Invalid date increment"))?;
+    }
+
+    Ok(calendar)
 }
 
 /// Get all daily tasks (both mini-routines and regular weekday tasks)
@@ -263,13 +345,17 @@ pub fn is_due_this_week(
 
 /// Reset due daily tasks to uncompleted state
 pub async fn reset_daily_tasks(pool: &SqlitePool, current_date: chrono::NaiveDate) -> Result<()> {
+    let current_date_str = current_date.format("%Y-%m-%d").to_string();
+
     sqlx::query(
         r#"
         UPDATE daily_tasks
         SET completed = 0, completed_at = NULL
-        WHERE day_of_week = -1 OR interval_weeks = 1
+        WHERE (day_of_week = -1 OR interval_weeks = 1)
+          AND (start_date IS NULL OR start_date <= ?)
         "#,
     )
+    .bind(&current_date_str)
     .execute(pool)
     .await?;
 
@@ -284,6 +370,17 @@ pub async fn reset_daily_tasks(pool: &SqlitePool, current_date: chrono::NaiveDat
     .await?;
 
     for (id, interval_weeks, start_date) in interval_tasks {
+        if let Some(start_date_val) = start_date.as_deref() {
+            let start = match chrono::NaiveDate::parse_from_str(start_date_val, "%Y-%m-%d") {
+                Ok(date) => date,
+                Err(_) => continue,
+            };
+
+            if current_date < start {
+                continue;
+            }
+        }
+
         let is_due = match start_date.as_deref() {
             Some(start) => is_due_this_week(start, interval_weeks, current_date),
             None => true,
@@ -441,6 +538,7 @@ pub async fn create_daily_task(
 }
 
 /// Update an existing daily task
+#[allow(clippy::too_many_arguments)]
 pub async fn update_daily_task(
     pool: &SqlitePool,
     id: i64,
@@ -449,11 +547,12 @@ pub async fn update_daily_task(
     zone: Option<&str>,
     day_of_week: i64,
     interval_weeks: i64,
+    start_date: Option<&str>,
 ) -> Result<DailyTask> {
     sqlx::query(
         r#"
         UPDATE daily_tasks
-        SET name = ?, description = ?, zone = ?, day_of_week = ?, interval_weeks = ?
+        SET name = ?, description = ?, zone = ?, day_of_week = ?, interval_weeks = ?, start_date = COALESCE(?, start_date)
         WHERE id = ?
         "#,
     )
@@ -462,6 +561,7 @@ pub async fn update_daily_task(
     .bind(zone)
     .bind(day_of_week)
     .bind(interval_weeks)
+    .bind(start_date)
     .bind(id)
     .execute(pool)
     .await?;
@@ -1133,6 +1233,7 @@ pub mod tests {
             Some("Bathroom"),
             2,
             4,
+            None,
         )
         .await?;
 
@@ -1200,6 +1301,333 @@ pub mod tests {
             has_mini_routine,
             "Should include mini-routine tasks (day_of_week = -1)"
         );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_weekly_task_hidden_before_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a weekly task with future start_date
+        let task =
+            create_daily_task(&pool, "Future weekly", None, None, 1, 1, "2026-02-20").await?;
+
+        // Query for tasks BEFORE start_date
+        let before_start = chrono::NaiveDate::from_ymd_opt(2026, 2, 11).unwrap(); // Feb 11, 2026 (Wednesday)
+        let tasks = get_today_tasks_for_date(&pool, 1, before_start).await?;
+
+        // Task should be HIDDEN before start_date
+        assert!(!tasks.iter().any(|t| t.id == task.id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_weekly_task_visible_on_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a weekly task starting on Monday Feb 16
+        let task =
+            create_daily_task(&pool, "Start on date", None, None, 1, 1, "2026-02-16").await?;
+
+        // Query for tasks ON start_date (Monday)
+        let on_start = chrono::NaiveDate::from_ymd_opt(2026, 2, 16).unwrap();
+        let tasks = get_today_tasks_for_date(&pool, 1, on_start).await?;
+
+        // Task should be VISIBLE on start_date
+        assert!(tasks.iter().any(|t| t.id == task.id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_weekly_task_visible_after_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a weekly task with past start_date
+        let task = create_daily_task(&pool, "Past weekly", None, None, 1, 1, "2026-02-09").await?;
+
+        // Query for tasks AFTER start_date
+        let after_start = chrono::NaiveDate::from_ymd_opt(2026, 2, 16).unwrap(); // Monday Feb 16
+        let tasks = get_today_tasks_for_date(&pool, 1, after_start).await?;
+
+        // Task should be VISIBLE after start_date
+        assert!(tasks.iter().any(|t| t.id == task.id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_null_start_date_always_visible() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create task with NULL start_date by directly inserting
+        let result = sqlx::query(
+            r#"
+            INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+            VALUES (?, NULL, NULL, 1, 0, NULL, 1, NULL)
+            "#,
+        )
+        .bind("Null start date task")
+        .execute(&pool)
+        .await?;
+        let task_id = result.last_insert_rowid();
+
+        // Query for any date
+        let any_date = chrono::NaiveDate::from_ymd_opt(2026, 2, 11).unwrap();
+        let tasks = get_today_tasks_for_date(&pool, 1, any_date).await?;
+
+        // Task with NULL start_date should always be VISIBLE (backward compatibility)
+        assert!(tasks.iter().any(|t| t.id == task_id));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_update_daily_task_with_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09").await?;
+
+        let updated = update_daily_task(
+            &pool,
+            task.id,
+            "Updated",
+            None,
+            None,
+            1,
+            1,
+            Some("2026-02-20"),
+        )
+        .await?;
+
+        assert_eq!(updated.start_date, Some("2026-02-20".to_string()));
+        assert_eq!(updated.name, "Updated");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_update_daily_task_preserves_start_date_when_none() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let task = create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09").await?;
+
+        let updated =
+            update_daily_task(&pool, task.id, "Updated name", None, None, 1, 1, None).await?;
+
+        assert_eq!(updated.start_date, Some("2026-02-09".to_string()));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_skips_future_start_date_weekly_tasks() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create weekly task with future start_date
+        let task = create_daily_task(&pool, "Future task", None, None, 1, 1, "2026-02-20").await?;
+
+        // Complete the task
+        toggle_task(&pool, task.id).await?;
+
+        // Reset on Feb 11 (BEFORE start_date)
+        let reset_date = chrono::NaiveDate::from_ymd_opt(2026, 2, 11).unwrap();
+        reset_daily_tasks(&pool, reset_date).await?;
+
+        // Task should still be completed (not reset) because start_date is in the future
+        let task_after = get_daily_task_by_id(&pool, task.id).await?;
+        assert!(task_after.completed);
+        assert!(task_after.completed_at.is_some());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_resets_past_start_date_weekly_tasks() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create weekly task with past start_date
+        let task = create_daily_task(&pool, "Past task", None, None, 1, 1, "2026-02-09").await?;
+
+        // Complete the task
+        toggle_task(&pool, task.id).await?;
+
+        // Reset on Feb 16 (AFTER start_date)
+        let reset_date = chrono::NaiveDate::from_ymd_opt(2026, 2, 16).unwrap();
+        reset_daily_tasks(&pool, reset_date).await?;
+
+        // Task should be reset because start_date is in the past
+        let task_after = get_daily_task_by_id(&pool, task.id).await?;
+        assert!(!task_after.completed);
+        assert!(task_after.completed_at.is_none());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_mini_routine_every_day() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a mini-routine task (-1 day_of_week)
+        let result = sqlx::query(
+            r#"
+            INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+            VALUES (?, NULL, 'Kitchen', -1, 0, NULL, 1, NULL)
+            "#,
+        )
+        .bind("Mini routine test")
+        .execute(&pool)
+        .await?;
+        let _task_id = result.last_insert_rowid();
+
+        // Get tasks for February 2026 (28 days)
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        assert_eq!(calendar.len(), 28, "February 2026 should have 28 days");
+
+        // Mini-routine should appear on every single day
+        for day in &calendar {
+            let mini_routines: Vec<_> = day
+                .tasks
+                .iter()
+                .filter(|t| t.name == "Mini routine test")
+                .collect();
+            assert_eq!(
+                mini_routines.len(),
+                1,
+                "Mini routine should appear on {}",
+                day.date
+            );
+            assert_eq!(mini_routines[0].zone.as_deref(), Some("Kitchen"));
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_monday_only() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a Monday-only task (day_of_week=1)
+        let _task = create_daily_task(
+            &pool,
+            "Monday only",
+            None,
+            Some("Bathroom"),
+            1,
+            1,
+            "2026-01-01",
+        )
+        .await?;
+
+        // Get tasks for February 2026
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        // Count how many days have this task
+        let mut monday_count = 0;
+        for day in &calendar {
+            if day.tasks.iter().any(|t| t.name == "Monday only") {
+                monday_count += 1;
+            }
+        }
+
+        // February 2026 starts on Sunday, so Mondays are: 2, 9, 16, 23
+        assert_eq!(monday_count, 4, "Should have 4 Mondays in February 2026");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_biweekly_due_weeks() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create a biweekly Monday task starting 2026-02-02 (first Monday of Feb 2026)
+        let _task = create_daily_task(
+            &pool,
+            "Biweekly Monday",
+            None,
+            Some("Living Room"),
+            1,
+            2,
+            "2026-02-02",
+        )
+        .await?;
+
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        let mut biweekly_count = 0;
+        for day in &calendar {
+            if day.tasks.iter().any(|t| t.name == "Biweekly Monday") {
+                biweekly_count += 1;
+            }
+        }
+
+        // Biweekly starting Feb 2: should appear on Feb 2 and Feb 16
+        assert_eq!(
+            biweekly_count, 2,
+            "Biweekly task should appear on 2 Mondays in February 2026"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_future_start_date() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Create task with start_date in middle of February
+        let _task = create_daily_task(
+            &pool,
+            "Future start",
+            None,
+            None,
+            3, // Wednesday
+            1,
+            "2026-02-18",
+        )
+        .await?;
+
+        let calendar = get_tasks_for_month(&pool, 2026, 2).await?;
+
+        // Count appearances
+        let mut count = 0;
+        for day in &calendar {
+            if day.tasks.iter().any(|t| t.name == "Future start") {
+                count += 1;
+            }
+        }
+
+        // Wednesdays in Feb 2026: 4, 11, 18, 25
+        // But start_date is 2026-02-18, so only 18 and 25 should show
+        assert_eq!(
+            count, 2,
+            "Task should only appear on Wednesdays on/after start_date"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_tasks_for_month_boundary_handling() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        // Test different month lengths
+        let jan = get_tasks_for_month(&pool, 2026, 1).await?;
+        assert_eq!(jan.len(), 31, "January should have 31 days");
+
+        let feb = get_tasks_for_month(&pool, 2026, 2).await?;
+        assert_eq!(feb.len(), 28, "February 2026 should have 28 days");
+
+        let apr = get_tasks_for_month(&pool, 2026, 4).await?;
+        assert_eq!(apr.len(), 30, "April should have 30 days");
+
+        // Verify date format
+        assert_eq!(jan[0].date, "2026-01-01");
+        assert_eq!(jan[30].date, "2026-01-31");
+        assert_eq!(feb[0].date, "2026-02-01");
+        assert_eq!(feb[27].date, "2026-02-28");
 
         Ok(())
     }

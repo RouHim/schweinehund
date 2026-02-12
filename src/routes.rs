@@ -20,6 +20,10 @@ impl reject::Reject for DatabaseError {}
 struct NotFoundError;
 impl reject::Reject for NotFoundError {}
 
+#[derive(Debug)]
+struct BadRequest;
+impl reject::Reject for BadRequest {}
+
 #[derive(Serialize)]
 struct ErrorResponse {
     message: String,
@@ -49,6 +53,7 @@ struct CreateTaskRequest {
     zone: Option<String>,
     day_of_week: i64,
     interval_weeks: Option<i64>,
+    start_date: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -58,6 +63,7 @@ struct UpdateTaskRequest {
     zone: Option<String>,
     day_of_week: i64,
     interval_weeks: Option<i64>,
+    start_date: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -79,6 +85,11 @@ struct ReorderRequest {
     order: Vec<i64>,
 }
 
+#[derive(Deserialize)]
+struct CalendarQuery {
+    month: String,
+}
+
 fn with_db(pool: SqlitePool) -> impl Filter<Extract = (SqlitePool,), Error = Infallible> + Clone {
     warp::any().map(move || pool.clone())
 }
@@ -94,6 +105,7 @@ pub fn api_routes(
     health()
         .or(get_today_tasks(pool.clone()))
         .or(get_all_tasks(pool.clone()))
+        .or(calendar_tasks(pool.clone()))
         .or(toggle_task(pool.clone()))
         .or(get_deep_cleaning(pool.clone()))
         .or(complete_deep_task(pool.clone()))
@@ -136,6 +148,16 @@ fn get_all_tasks(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = 
         .and_then(handle_get_all_tasks)
 }
 
+fn calendar_tasks(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "tasks" / "calendar")
+        .and(warp::get())
+        .and(warp::query::<CalendarQuery>())
+        .and(with_db(pool))
+        .and_then(handle_get_calendar)
+}
+
 async fn handle_get_today_tasks(
     params: std::collections::HashMap<String, String>,
     pool: SqlitePool,
@@ -163,6 +185,33 @@ async fn handle_get_all_tasks(pool: SqlitePool) -> Result<impl Reply, Rejection>
         daily_tasks,
         deep_cleaning_tasks,
     }))
+}
+
+async fn handle_get_calendar(
+    query: CalendarQuery,
+    pool: SqlitePool,
+) -> Result<impl Reply, Rejection> {
+    let query_date = chrono::NaiveDate::parse_from_str(&format!("{}-01", query.month), "%Y-%m-%d")
+        .map_err(|_| reject::custom(BadRequest))?;
+
+    let now = chrono::Local::now();
+    let current_date = now.date_naive();
+    let current_month_first =
+        chrono::NaiveDate::from_ymd_opt(current_date.year(), current_date.month(), 1)
+            .ok_or_else(|| reject::custom(DatabaseError))?;
+
+    if query_date < current_month_first {
+        return Err(reject::custom(BadRequest));
+    }
+
+    let year = query_date.year();
+    let month = query_date.month();
+
+    let calendar = db::get_tasks_for_month(&pool, year, month)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&calendar))
 }
 
 fn toggle_task(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -435,7 +484,14 @@ async fn handle_create_task(
         interval_weeks
     };
 
-    let start_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let start_date = match req.start_date {
+        Some(ref date) => {
+            chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+                .map_err(|_| reject::custom(DatabaseError))?;
+            date.clone()
+        }
+        None => chrono::Local::now().format("%Y-%m-%d").to_string(),
+    };
 
     let task = db::create_daily_task(
         &pool,
@@ -490,6 +546,11 @@ async fn handle_update_task(
         return Err(reject::custom(DatabaseError));
     }
 
+    if let Some(ref date) = req.start_date {
+        chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+            .map_err(|_| reject::custom(DatabaseError))?;
+    }
+
     let final_interval = if req.day_of_week == -1 {
         1
     } else {
@@ -504,6 +565,7 @@ async fn handle_update_task(
         req.zone.as_deref(),
         req.day_of_week,
         final_interval,
+        req.start_date.as_deref(),
     )
     .await
     .map_err(|e| {
@@ -623,6 +685,13 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
             }),
             StatusCode::NOT_FOUND,
         ))
+    } else if err.find::<BadRequest>().is_some() {
+        Ok(warp::reply::with_status(
+            warp::reply::json(&ErrorResponse {
+                message: "Bad request".to_string(),
+            }),
+            StatusCode::BAD_REQUEST,
+        ))
     } else if err.find::<DatabaseError>().is_some() {
         Ok(warp::reply::with_status(
             warp::reply::json(&ErrorResponse {
@@ -669,6 +738,7 @@ mod tests {
             zone: None,
             day_of_week: 1,
             interval_weeks: Some(2),
+            start_date: None,
         };
 
         let result = handle_create_task(req, pool).await;
@@ -689,6 +759,7 @@ mod tests {
             zone: None,
             day_of_week: 1,
             interval_weeks: Some(0),
+            start_date: None,
         };
 
         let result = handle_create_task(req, pool).await;
@@ -706,6 +777,7 @@ mod tests {
             zone: None,
             day_of_week: 1,
             interval_weeks: Some(-5),
+            start_date: None,
         };
 
         let result = handle_create_task(req, pool).await;
@@ -723,6 +795,7 @@ mod tests {
             zone: None,
             day_of_week: 1,
             interval_weeks: Some(53),
+            start_date: None,
         };
 
         let result = handle_create_task(req, pool).await;
@@ -740,6 +813,7 @@ mod tests {
             zone: None,
             day_of_week: -1,
             interval_weeks: Some(10),
+            start_date: None,
         };
 
         let result = handle_create_task(req, pool).await;
@@ -749,7 +823,6 @@ mod tests {
         );
 
         if let Ok(reply) = result {
-            // Parse the response to verify interval_weeks is forced to 1
             let status = reply.into_response().status();
             assert_eq!(status, StatusCode::CREATED);
         }
@@ -757,6 +830,93 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_task_changes_interval() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let created = db::create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09")
+            .await
+            .unwrap();
+
+        let req = UpdateTaskRequest {
+            name: "Updated".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: Some(3),
+            start_date: None,
+        };
+
+        let result = handle_update_task(created.id, req, pool).await;
+        assert!(result.is_ok(), "Should update task with new interval_weeks");
+    }
+
+    #[tokio::test]
+    async fn test_create_task_with_user_start_date() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Future Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: None,
+            start_date: Some("2026-03-01".to_string()),
+        };
+
+        let result = handle_create_task(req, pool.clone()).await;
+        assert!(result.is_ok(), "Should accept user-provided start_date");
+
+        // Verify the task was created with the correct start_date
+        let tasks = db::get_all_daily_tasks(&pool).await.unwrap().0;
+        let task = tasks.into_iter().find(|t| t.name == "Future Task").unwrap();
+        assert_eq!(task.start_date, Some("2026-03-01".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_create_task_without_start_date_defaults_today() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Today Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: None,
+            start_date: None,
+        };
+
+        let result = handle_create_task(req, pool.clone()).await;
+        assert!(result.is_ok(), "Should accept None and default to today");
+
+        // Verify the task was created with today's date
+        let tasks = db::get_all_daily_tasks(&pool).await.unwrap().0;
+        let task = tasks.into_iter().find(|t| t.name == "Today Task").unwrap();
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        assert_eq!(task.start_date, Some(today));
+    }
+
+    #[tokio::test]
+    async fn test_create_task_with_invalid_start_date_rejected() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = CreateTaskRequest {
+            name: "Bad Date Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: None,
+            start_date: Some("not-a-date".to_string()),
+        };
+
+        let result = handle_create_task(req, pool).await;
+        assert!(result.is_err(), "Should reject invalid date format");
+    }
+
+    #[tokio::test]
+    async fn test_update_task_with_start_date() {
         let pool = db::init_pool("sqlite::memory:").await.unwrap();
         db::run_migrations(&pool).await.unwrap();
 
@@ -770,10 +930,48 @@ mod tests {
             description: None,
             zone: None,
             day_of_week: 1,
-            interval_weeks: Some(3),
+            interval_weeks: None,
+            start_date: Some("2026-03-15".to_string()),
         };
 
-        let result = handle_update_task(created.id, req, pool).await;
-        assert!(result.is_ok(), "Should update task with new interval_weeks");
+        let result = handle_update_task(created.id, req, pool.clone()).await;
+        assert!(result.is_ok(), "Should accept start_date update");
+
+        // Verify the start_date was changed
+        let tasks = db::get_all_daily_tasks(&pool).await.unwrap().0;
+        let task = tasks.into_iter().find(|t| t.id == created.id).unwrap();
+        assert_eq!(task.start_date, Some("2026-03-15".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_task_without_start_date_preserves() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        // Create a task with a specific start_date
+        let created = db::create_daily_task(&pool, "Original", None, None, 1, 1, "2026-02-09")
+            .await
+            .unwrap();
+
+        let req = UpdateTaskRequest {
+            name: "Updated Name".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: 1,
+            interval_weeks: None,
+            start_date: None,
+        };
+
+        let result = handle_update_task(created.id, req, pool.clone()).await;
+        assert!(result.is_ok(), "Should accept update with None start_date");
+
+        // Verify the start_date was preserved
+        let tasks = db::get_all_daily_tasks(&pool).await.unwrap().0;
+        let task = tasks.into_iter().find(|t| t.id == created.id).unwrap();
+        assert_eq!(
+            task.start_date,
+            Some("2026-02-09".to_string()),
+            "Should preserve existing start_date when None is passed"
+        );
     }
 }
