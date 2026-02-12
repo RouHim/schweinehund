@@ -352,12 +352,12 @@ function renderTasks(tasks) {
                     <div class="task-content">
                         <h3 class="task-name">${escapeHtml(task.name)}</h3>
                         ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
-                        <div class="task-meta">
-                             ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
-                             ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
-                             ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
-                             ${task.start_date && new Date(task.start_date) > new Date() ? `<span class="badge start-date-badge">ab ${task.start_date}</span>` : ''}
-                         </div>
+                         <div class="task-meta">
+                              ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
+                              ${task.day_of_week > 0 ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
+                              ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
+                              ${task.start_date && new Date(task.start_date) > new Date() ? `<span class="badge start-date-badge">ab ${task.start_date}</span>` : ''}
+                          </div>
                     </div>
                 </label>
                 <div class="task-actions">
@@ -408,7 +408,7 @@ function renderAllTasks() {
                     ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
                     <div class="task-meta">
                         ${task.zone ? `<span class="task-badge">${escapeHtml(task.zone)}</span>` : ''}
-                        ${task.day_of_week ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
+                        ${task.day_of_week > 0 ? `<span class="task-badge">${getDayName(task.day_of_week)}</span>` : ''}
                         ${task.interval_weeks > 1 ? `<span class="badge interval-badge">alle ${task.interval_weeks} Wo.</span>` : ''}
                         ${task.start_date && new Date(task.start_date) > new Date() ? `<span class="badge start-date-badge">ab ${task.start_date}</span>` : ''}
                     </div>
