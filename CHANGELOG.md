@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/RouHim/schweinehund/compare/v1.7.0...v1.8.0) (2026-02-12)
+
+
+### Features
+
+* **frontend:** add start-date mismatch hint in task modal ([20e4021](https://github.com/RouHim/schweinehund/commit/20e402192be68787cb1ba6f0ea41c279d8d9c525))
+
 # [1.7.0](https://github.com/RouHim/schweinehund/compare/v1.6.0...v1.7.0) (2026-02-12)
 
 
