@@ -151,12 +151,12 @@ h2 {
 header nav.tab-bar {
     all: unset;
     display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 .tab-bar {
     display: flex;
-    width: 100%;
-    justify-content: center;
     gap: 0;
     background: transparent;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
