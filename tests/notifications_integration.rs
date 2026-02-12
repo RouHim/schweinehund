@@ -8,8 +8,8 @@
 //!   cargo test --test notifications_integration -- --ignored --test-threads=1
 //!   podman compose -f docker-compose.test.yml down
 
-use std::sync::{Mutex, OnceLock};
 use serde_json::Value as JsonValue;
+use std::sync::{Mutex, OnceLock};
 
 fn generate_unique_topic(prefix: &str) -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -27,7 +27,7 @@ async fn setup_clean_db() -> sqlx::SqlitePool {
     schweinehund::db::run_migrations(&pool)
         .await
         .expect("migrations should succeed");
-    
+
     // Clear seed data from migrations
     sqlx::query("DELETE FROM daily_tasks")
         .execute(&pool)
@@ -37,7 +37,7 @@ async fn setup_clean_db() -> sqlx::SqlitePool {
         .execute(&pool)
         .await
         .expect("clear deep cleaning seed data should succeed");
-    
+
     pool
 }
 
@@ -78,27 +78,27 @@ fn health_check_ntfy() {
 /// Poll ntfy for messages on a topic
 fn poll_ntfy_messages(topic: &str) -> Result<Vec<JsonValue>, String> {
     let url = format!("http://localhost:8199/{}/json?poll=1", topic);
-    
+
     let mut response = ureq::get(&url)
         .call()
         .map_err(|e| format!("Request failed: {}", e))?;
-    
+
     if response.status() != 200 {
         return Err(format!("HTTP error: {}", response.status()));
     }
-    
+
     let body = response
         .body_mut()
         .read_to_string()
         .map_err(|e| format!("Failed to read response body: {}", e))?;
-    
+
     // ntfy returns NDJSON (newline-delimited JSON)
     let messages: Vec<JsonValue> = body
         .lines()
         .filter(|line| !line.is_empty())
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect();
-    
+
     Ok(messages)
 }
 
@@ -110,7 +110,7 @@ async fn test_send_reminder_delivers_to_ntfy() {
 
     // Setup: unique topic for this test
     let topic = generate_unique_topic("test-reminder-delivers");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -134,7 +134,10 @@ async fn test_send_reminder_delivers_to_ntfy() {
     assert_eq!(msg["message"].as_str(), Some("Test Body"));
     assert_eq!(msg["priority"].as_i64(), Some(3));
     assert!(
-        msg["tags"].as_array().unwrap().contains(&serde_json::json!("schweinehund")),
+        msg["tags"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("schweinehund")),
         "Should have schweinehund tag"
     );
 
@@ -152,7 +155,7 @@ async fn test_send_reminder_custom_priority() {
     health_check_ntfy();
 
     let topic = generate_unique_topic("test-reminder-priority");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -184,7 +187,7 @@ async fn test_send_daily_reminder_with_incomplete_tasks() {
     health_check_ntfy();
 
     let topic = generate_unique_topic("test-daily-incomplete");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -205,7 +208,7 @@ async fn test_send_daily_reminder_with_incomplete_tasks() {
         VALUES 
             ('Küche wischen', 'Boden reinigen', 'Küche', -1, 0, 1),
             ('Bad putzen', 'Waschbecken reinigen', 'Bad', -1, 0, 1)
-        "#
+        "#,
     )
     .execute(&pool)
     .await
@@ -224,9 +227,15 @@ async fn test_send_daily_reminder_with_incomplete_tasks() {
 
     let msg = &messages[0];
     let body = msg["message"].as_str().expect("message should be string");
-    
-    assert!(body.contains("Heute zu tun"), "Should contain 'Heute zu tun'");
-    assert!(body.contains("Küche wischen"), "Should list Küche wischen task");
+
+    assert!(
+        body.contains("Heute zu tun"),
+        "Should contain 'Heute zu tun'"
+    );
+    assert!(
+        body.contains("Küche wischen"),
+        "Should list Küche wischen task"
+    );
     assert!(body.contains("Bad putzen"), "Should list Bad putzen task");
 
     unsafe {
@@ -242,7 +251,7 @@ async fn test_send_daily_reminder_all_tasks_complete() {
     health_check_ntfy();
 
     let topic = generate_unique_topic("test-daily-complete");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -272,7 +281,7 @@ async fn test_send_daily_reminder_all_tasks_complete() {
         VALUES 
             ('Completed Task 1', 'Done', 'Kitchen', -1, 1, 1),
             ('Completed Task 2', 'Done', 'Bath', -1, 1, 1)
-        "#
+        "#,
     )
     .execute(&pool)
     .await
@@ -289,7 +298,7 @@ async fn test_send_daily_reminder_all_tasks_complete() {
 
     let msg = &messages[0];
     let body = msg["message"].as_str().expect("message should be string");
-    
+
     assert!(
         body.contains("Alle Aufgaben erledigt"),
         "Should contain 'Alle Aufgaben erledigt!' when all tasks complete. Actual body: {}",
@@ -309,7 +318,7 @@ async fn test_send_daily_reminder_with_deep_cleaning_task() {
     health_check_ntfy();
 
     let topic = generate_unique_topic("test-daily-deepclean");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -327,7 +336,7 @@ async fn test_send_daily_reminder_with_deep_cleaning_task() {
         r#"
         INSERT INTO deep_cleaning_tasks (name, description, zone, queue_position)
         VALUES ('Fenster putzen', 'Alle Fenster reinigen', 'Wohnzimmer', 1)
-        "#
+        "#,
     )
     .execute(&pool)
     .await
@@ -344,9 +353,15 @@ async fn test_send_daily_reminder_with_deep_cleaning_task() {
 
     let msg = &messages[0];
     let body = msg["message"].as_str().expect("message should be string");
-    
-    assert!(body.contains("Deep Clean"), "Should contain 'Deep Clean' label");
-    assert!(body.contains("Fenster putzen"), "Should list deep cleaning task");
+
+    assert!(
+        body.contains("Deep Clean"),
+        "Should contain 'Deep Clean' label"
+    );
+    assert!(
+        body.contains("Fenster putzen"),
+        "Should list deep cleaning task"
+    );
 
     unsafe {
         std::env::remove_var("NTFY_TOPIC");
@@ -361,7 +376,7 @@ async fn test_send_daily_reminder_notifications_disabled() {
     health_check_ntfy();
 
     let topic = generate_unique_topic("test-daily-disabled");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -380,7 +395,7 @@ async fn test_send_daily_reminder_notifications_disabled() {
         r#"
         INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, interval_weeks)
         VALUES ('Task', 'Test', 'Zone', -1, 0, 1)
-        "#
+        "#,
     )
     .execute(&pool)
     .await
@@ -440,7 +455,7 @@ async fn test_send_test_notification() {
     health_check_ntfy();
 
     let topic = generate_unique_topic("test-notification");
-    
+
     unsafe {
         std::env::set_var("NTFY_TOPIC", &topic);
         std::env::set_var("NTFY_SERVER", "http://localhost:8199");
@@ -459,7 +474,7 @@ async fn test_send_test_notification() {
 
     let msg = &messages[0];
     assert_eq!(msg["title"].as_str(), Some("Test Notification"));
-    
+
     let body = msg["message"].as_str().expect("message should be string");
     assert!(
         body.contains("Schweinehund"),
