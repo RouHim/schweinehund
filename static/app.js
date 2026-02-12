@@ -868,6 +868,62 @@ function closeFunFactModal() {
     }
 }
 
+function openCalendarDayModal(dateStr) {
+    const modal = document.getElementById('calendar-day-modal');
+    const titleEl = document.getElementById('calendar-day-modal-title');
+    const contentEl = document.querySelector('.calendar-day-modal-content');
+    
+    if (!modal || !titleEl || !contentEl) {
+        console.error('Kalender-Tagesmodal-Elemente nicht gefunden');
+        return;
+    }
+    
+    const date = new Date(dateStr + 'T00:00:00');
+    const dayNumber = date.getDate();
+    const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                       'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+    const dayName = dayNames[date.getDay()];
+    const monthName = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    
+    titleEl.textContent = `${dayName}, ${dayNumber}. ${monthName} ${year}`;
+    
+    const calendarMap = {};
+    if (state.calendarData && Array.isArray(state.calendarData)) {
+        state.calendarData.forEach(entry => {
+            calendarMap[entry.date] = entry.tasks || [];
+        });
+    }
+    
+    const tasks = calendarMap[dateStr] || [];
+    
+    if (tasks.length === 0) {
+        contentEl.innerHTML = '<div class="calendar-day-modal-empty">Keine Aufgaben</div>';
+    } else {
+        contentEl.innerHTML = tasks.map(task => {
+            const zoneBadge = task.zone 
+                ? `<span class="calendar-day-modal-task-zone">${escapeHtml(task.zone)}</span>`
+                : '';
+            return `
+                <div class="calendar-day-modal-task">
+                    <div class="calendar-day-modal-task-name">${escapeHtml(task.name)}</div>
+                    ${zoneBadge}
+                </div>
+            `;
+        }).join('');
+    }
+    
+    modal.showModal();
+}
+
+function closeCalendarDayModal() {
+    const modal = document.getElementById('calendar-day-modal');
+    if (modal) {
+        modal.close();
+    }
+}
+
 async function fetchCalendar(year = null, month = null) {
     const now = new Date();
     const targetYear = year || now.getFullYear();
@@ -964,6 +1020,13 @@ function renderCalendar() {
     }
     
     grid.innerHTML = html;
+    
+    grid.querySelectorAll('.calendar-day:not(.calendar-day-empty)').forEach(cell => {
+        cell.addEventListener('click', () => {
+            const dateStr = cell.dataset.date;
+            if (dateStr) openCalendarDayModal(dateStr);
+        });
+    });
 }
 
 function initCalendarListeners() {
@@ -995,6 +1058,21 @@ function initCalendarListeners() {
             }
             
             fetchCalendar(year, month);
+        });
+    }
+    
+    const modal = document.getElementById('calendar-day-modal');
+    const closeBtn = modal?.querySelector('[data-testid="calendar-day-modal-close"]');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeCalendarDayModal);
+    }
+    
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeCalendarDayModal();
+            }
         });
     }
 }

@@ -157,6 +157,18 @@
         </article>
     </dialog>
 
+    <dialog id="calendar-day-modal" data-testid="calendar-day-modal">
+        <article>
+            <header>
+                <h3 id="calendar-day-modal-title" data-testid="calendar-day-modal-title"></h3>
+                <button class="close-button" data-testid="calendar-day-modal-close" aria-label="Schließen">×</button>
+            </header>
+            <div class="calendar-day-modal-content" data-testid="calendar-day-modal-tasks">
+                <!-- Populated by JS -->
+            </div>
+        </article>
+    </dialog>
+
     <section id="all-tasks-section" style="display:none;">
         <h2>Tägliche Aufgaben</h2>
         <ul id="all-daily-tasks-list" class="task-list" data-testid="all-daily-tasks-list"></ul>
