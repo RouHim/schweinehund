@@ -37,6 +37,14 @@ jobs:
       - name: Run unit tests
         run: cargo test
 
+      - name: Run integration tests with ntfy
+        run: |
+          docker compose -f docker-compose.test.yml up -d
+          sleep 5
+          cargo test -- --ignored --test-threads=1 || EXIT_CODE=$?
+          docker compose -f docker-compose.test.yml down
+          exit ${EXIT_CODE:-0}
+
       - name: Build release
         run: cargo build --release
 

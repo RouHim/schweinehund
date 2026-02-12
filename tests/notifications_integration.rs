@@ -422,7 +422,6 @@ async fn test_send_daily_reminder_notifications_disabled() {
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_send_reminder_server_unreachable() {
     let _guard = env_lock().lock().expect("env lock poisoned");
 
