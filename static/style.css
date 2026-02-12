@@ -88,7 +88,10 @@ header {
     font-size: 2rem;
     line-height: 1;
     animation: bounce 2s ease-in-out infinite;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+
+.mascot img {
+    filter: drop-shadow(0 0 1.5px white) drop-shadow(0 0 1.5px white) drop-shadow(0 0 1px white) drop-shadow(0 2px 4px rgba(0,0,0,0.15));
 }
 
 @keyframes bounce {
@@ -157,8 +160,6 @@ header nav.tab-bar {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     border-bottom: none;
     padding: 0 1rem;
-    max-width: 720px;
-    margin: 0 auto;
 }
 
 .tab-bar .tab {
@@ -169,7 +170,7 @@ header nav.tab-bar {
     font-weight: 600;
     color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    position: relative;
     transition: all var(--transition);
     min-height: 44px;
 }
@@ -181,7 +182,18 @@ header nav.tab-bar {
 
 .tab-bar .tab.active {
     color: white;
-    border-bottom-color: white;
+}
+
+.tab-bar .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    background: white;
+    border-radius: 3px 3px 0 0;
 }
 
 /* --- Container --- */
