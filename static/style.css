@@ -155,6 +155,7 @@ header nav.tab-bar {
 
 .tab-bar {
     display: flex;
+    width: 100%;
     justify-content: center;
     gap: 0;
     background: transparent;
