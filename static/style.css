@@ -1104,9 +1104,10 @@ dialog footer button.secondary:hover {
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
     padding: 1rem;
+    overflow: hidden;
 }
 
-.calendar-weekday-header {
+.calendar-weekday {
     text-align: center;
     font-size: 0.75rem;
     font-weight: 700;
@@ -1117,7 +1118,6 @@ dialog footer button.secondary:hover {
 }
 
 .calendar-day {
-    aspect-ratio: 1;
     background: var(--background);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-sm);
@@ -1128,6 +1128,9 @@ dialog footer button.secondary:hover {
     transition: all var(--transition);
     cursor: pointer;
     position: relative;
+    min-height: 48px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .calendar-day:hover {
