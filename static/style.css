@@ -1167,14 +1167,21 @@ dialog footer button.secondary:hover {
     flex-direction: column;
     gap: 2px;
     overflow: hidden;
+    align-items: center;
 }
 
 .calendar-task-dot {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--primary);
-    align-self: center;
+}
+
+.calendar-task-more {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-top: 2px;
 }
 
 .calendar-task-dot.completed {

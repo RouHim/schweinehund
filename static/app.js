@@ -948,10 +948,17 @@ function renderCalendar() {
         const isToday = (year === currentYear && month === currentMonth && day === now.getDate());
         const todayClass = isToday ? ' today' : '';
         
+        const maxDotsVisible = 3;
+        const tasksToShow = tasks.slice(0, maxDotsVisible);
+        const remainingCount = tasks.length - maxDotsVisible;
+        
         html += `
-            <div class="calendar-day${todayClass}" data-testid="calendar-day-${dateStr}">
+            <div class="calendar-day${todayClass}" data-testid="calendar-day-${dateStr}" data-date="${dateStr}">
                 <div class="calendar-day-number">${day}</div>
-                ${tasks.map(task => `<div class="calendar-task-name">${escapeHtml(task.name)}</div>`).join('')}
+                <div class="calendar-day-tasks">
+                    ${tasksToShow.map(() => `<div class="calendar-task-dot"></div>`).join('')}
+                    ${remainingCount > 0 ? `<div class="calendar-task-more">+${remainingCount}</div>` : ''}
+                </div>
             </div>
         `;
     }
