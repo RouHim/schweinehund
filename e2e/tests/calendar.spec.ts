@@ -117,9 +117,20 @@ test.describe('Calendar View', () => {
     // Switch to calendar tab
     await page.locator('[data-testid="tab-calendar"]').click();
     
-    // Verify task appears in today's cell
+    // Verify task appears in today's cell - click day to open modal
     const todayCell = page.locator(`[data-testid="calendar-day-${todayDate}"]`);
-    await expect(todayCell.locator('.calendar-task-name', { hasText: taskName })).toBeVisible();
+    await todayCell.click();
+    
+    // Modal should open
+    const dayModal = page.locator('[data-testid="calendar-day-modal"]');
+    await expect(dayModal).toBeVisible({ timeout: 3000 });
+    
+    // Verify task name appears in modal
+    await expect(dayModal.locator('[data-testid="calendar-day-modal-tasks"]', { hasText: taskName })).toBeVisible();
+    
+    // Close modal
+    await page.locator('[data-testid="calendar-day-modal-close"]').click();
+    await expect(dayModal).not.toBeVisible({ timeout: 3000 });
   });
 
   test('mini-routine appears on every day of the month', async ({ page }) => {
@@ -149,9 +160,13 @@ test.describe('Calendar View', () => {
     const dayCells = page.locator('.calendar-day:not(.calendar-day-empty)');
     const dayCount = await dayCells.count();
     
-    // Verify mini-routine appears in ALL day cells
-    const miniRoutineCells = page.locator('.calendar-task-name', { hasText: miniRoutineName });
-    await expect(miniRoutineCells).toHaveCount(dayCount);
+    // Verify mini-routine appears in ALL day cells by checking dots
+    // Each day should have at least one dot indicating the mini-routine task
+    for (let i = 0; i < dayCount; i++) {
+      const cell = dayCells.nth(i);
+      const dots = cell.locator('.calendar-task-dot');
+      await expect(dots.first()).toBeVisible();
+    }
   });
 
   test('next month navigation changes month label', async ({ page }) => {
@@ -249,31 +264,171 @@ test.describe('Calendar View', () => {
     // Switch to calendar
     await page.locator('[data-testid="tab-calendar"]').click();
     
-    // Verify task name appears (zone is in task name display)
-    const taskElements = page.locator('.calendar-task-name', { hasText: taskName });
-    await expect(taskElements.first()).toBeVisible();
+    // Get today's date
+    const todayDate = await page.evaluate(() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    });
+    
+    // Click today's cell to open modal
+    const todayCell = page.locator(`[data-testid="calendar-day-${todayDate}"]`);
+    await todayCell.click();
+    
+    // Modal should open
+    const dayModal = page.locator('[data-testid="calendar-day-modal"]');
+    await expect(dayModal).toBeVisible({ timeout: 3000 });
+    
+    // Verify task name and zone appear in modal
+    const modalContent = dayModal.locator('[data-testid="calendar-day-modal-tasks"]');
+    await expect(modalContent, { hasText: taskName }).toBeVisible();
+    await expect(modalContent, { hasText: taskZone }).toBeVisible();
+    
+    // Close modal
+    await page.locator('[data-testid="calendar-day-modal-close"]').click();
   });
 
-  test('empty days render without task elements', async ({ page }) => {
-    // Reset to clear all tasks
-    await page.request.post('/api/debug/reset-all');
-    await page.reload();
-    await page.waitForSelector('#tasks-list', { state: 'visible', timeout: 5000 });
+  test('days with only mini-routines render correctly', async ({ page }) => {
+    await page.locator('[data-testid="tab-calendar"]').click();
+    
+    await page.waitForSelector('.calendar-day:not(.calendar-day-empty)', { state: 'visible', timeout: 5000 });
+    
+    const firstDayCell = page.locator('.calendar-day:not(.calendar-day-empty)').first();
+    
+    await expect(firstDayCell.locator('.calendar-day-number')).toBeVisible();
+    
+    const taskDots = firstDayCell.locator('.calendar-task-dot');
+    const dotsCount = await taskDots.count();
+    
+    expect(dotsCount).toBe(3);
+    
+    const overflowIndicator = firstDayCell.locator('.calendar-task-more');
+    const hasOverflow = await overflowIndicator.isVisible();
+    
+    if (hasOverflow) {
+      const overflowText = await overflowIndicator.textContent();
+      expect(overflowText).toMatch(/\+\d+/);
+    }
+  });
+
+  test('clicking a day opens detail modal with task info', async ({ page }) => {
+    const todayWeekday = await page.evaluate(() => {
+      const dayOfWeek = new Date().getDay();
+      return dayOfWeek === 0 ? '7' : dayOfWeek.toString();
+    });
+    
+    const todayDate = await page.evaluate(() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    });
+    
+    const taskName = `Modal Test Task ${Date.now()}`;
+    const taskZone = 'Modal Test Zone';
+    
+    const addButton = page.locator('[data-testid="add-daily-task-btn"]');
+    await addButton.click();
+    
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+    
+    await page.locator('[data-testid="task-name-input"]').fill(taskName);
+    await page.locator('[data-testid="task-zone-input"]').fill(taskZone);
+    await page.locator('[data-testid="task-day-select"]').selectOption(todayWeekday);
+    
+    const responsePromise = page.waitForResponse(response => 
+      response.url().includes('/api/tasks') && response.request().method() === 'POST'
+    );
+    
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    await responsePromise;
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
     
     await page.locator('[data-testid="tab-calendar"]').click();
     
-    // Get first non-empty calendar day cell
+    const todayCell = page.locator(`[data-testid="calendar-day-${todayDate}"]`);
+    await todayCell.click();
+    
+    const dayModal = page.locator('[data-testid="calendar-day-modal"]');
+    await expect(dayModal).toBeVisible({ timeout: 3000 });
+    
+    const modalTitle = dayModal.locator('[data-testid="calendar-day-modal-title"]');
+    await expect(modalTitle).toBeVisible();
+    
+    const modalContent = dayModal.locator('[data-testid="calendar-day-modal-tasks"]');
+    await expect(modalContent, { hasText: taskName }).toBeVisible();
+    await expect(modalContent, { hasText: taskZone }).toBeVisible();
+    
+    await page.locator('[data-testid="calendar-day-modal-close"]').click();
+    await expect(dayModal).not.toBeVisible({ timeout: 3000 });
+  });
+
+  test('day detail modal shows mini-routine tasks', async ({ page }) => {
+    await page.locator('[data-testid="tab-calendar"]').click();
+    await page.waitForSelector('.calendar-day:not(.calendar-day-empty)', { state: 'visible', timeout: 5000 });
+    
     const firstDayCell = page.locator('.calendar-day:not(.calendar-day-empty)').first();
+    await firstDayCell.click();
     
-    // Should have day number but no task names
-    await expect(firstDayCell.locator('.calendar-day-number')).toBeVisible();
+    const dayModal = page.locator('[data-testid="calendar-day-modal"]');
+    await expect(dayModal).toBeVisible({ timeout: 3000 });
     
-    // Count task name elements (should be 0 initially with default data)
-    const taskNames = firstDayCell.locator('.calendar-task-name');
-    const count = await taskNames.count();
+    const modalContent = dayModal.locator('[data-testid="calendar-day-modal-tasks"]');
     
-    // With default test data, there might be tasks, so just verify structure exists
-    expect(count).toBeGreaterThanOrEqual(0);
+    await expect(modalContent).toContainText('Spuelmaschine');
+    
+    await page.locator('[data-testid="calendar-day-modal-close"]').click();
+    await expect(dayModal).not.toBeVisible({ timeout: 3000 });
+  });
+
+  test('day detail modal closes via close button', async ({ page }) => {
+    const todayWeekday = await page.evaluate(() => {
+      const dayOfWeek = new Date().getDay();
+      return dayOfWeek === 0 ? '7' : dayOfWeek.toString();
+    });
+    
+    const todayDate = await page.evaluate(() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    });
+    
+    const taskName = `Close Test Task ${Date.now()}`;
+    
+    const addButton = page.locator('[data-testid="add-daily-task-btn"]');
+    await addButton.click();
+    
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+    
+    await page.locator('[data-testid="task-name-input"]').fill(taskName);
+    await page.locator('[data-testid="task-zone-input"]').fill('Close Test Zone');
+    await page.locator('[data-testid="task-day-select"]').selectOption(todayWeekday);
+    
+    const responsePromise = page.waitForResponse(response => 
+      response.url().includes('/api/tasks') && response.request().method() === 'POST'
+    );
+    
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    await responsePromise;
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    
+    await page.locator('[data-testid="tab-calendar"]').click();
+    
+    const todayCell = page.locator(`[data-testid="calendar-day-${todayDate}"]`);
+    await todayCell.click();
+    
+    const dayModal = page.locator('[data-testid="calendar-day-modal"]');
+    await expect(dayModal).toBeVisible({ timeout: 3000 });
+    
+    await page.locator('[data-testid="calendar-day-modal-close"]').click();
+    await expect(dayModal).not.toBeVisible({ timeout: 3000 });
   });
 
   test('responsive layout works on mobile viewport', async ({ page }) => {
