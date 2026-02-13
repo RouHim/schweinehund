@@ -1,3 +1,12 @@
+## [1.8.1](https://github.com/RouHim/schweinehund/compare/v1.8.0...v1.8.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* **e2e:** clear pre-filled start date in empty-date hint test and fix CSS transform stacking ([10ae757](https://github.com/RouHim/schweinehund/commit/10ae757cb576b84779cde5d0f960b369f5f5bf76))
+* **tests:** un-ignore server-unreachable test and add ntfy integration CI step ([93fc7b3](https://github.com/RouHim/schweinehund/commit/93fc7b31d8b582de308a0a2d4c2b580cdd0036ec))
+* **ui:** polish header — full-width tabs, pill indicator, mascot outline ([cf50d1b](https://github.com/RouHim/schweinehund/commit/cf50d1bb0243114851c4952e0b2570c6a56a0280))
+
 # [1.8.0](https://github.com/RouHim/schweinehund/compare/v1.7.0...v1.8.0) (2026-02-12)
 
 
