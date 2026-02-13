@@ -36,6 +36,112 @@ function initModal() {
             openModal('deep-cleaning');
         });
     }
+    
+    const dayInput = document.getElementById('task-day-of-week');
+    const intervalGroup = document.getElementById('interval-group');
+    const startDateGroup = document.getElementById('start-date-group');
+    const startDateInput = document.getElementById('task-start-date');
+    const intervalInput = document.getElementById('task-interval-weeks');
+    if (dayInput) {
+        dayInput.addEventListener('change', () => {
+            const value = dayInput.value;
+            intervalGroup.style.display = value === '-1' ? 'none' : 'block';
+            startDateGroup.style.display = value === '-1' ? 'none' : 'block';
+            updateStartDateHint();
+        });
+    }
+    if (startDateInput) {
+        startDateInput.addEventListener('change', updateStartDateHint);
+        startDateInput.addEventListener('input', updateStartDateHint);
+    }
+    if (intervalInput) {
+        intervalInput.addEventListener('change', updateStartDateHint);
+        intervalInput.addEventListener('input', updateStartDateHint);
+    }
+}
+
+function getISOWeekMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function computeFirstAppearanceDate(dayOfWeek, startDateStr, intervalWeeks) {
+    const startDate = new Date(startDateStr + 'T00:00:00');
+    if (isNaN(startDate.getTime())) return null;
+    
+    const startJsDay = startDate.getDay();
+    const startApiDay = startJsDay === 0 ? 7 : startJsDay;
+    
+    let candidate = new Date(startDate);
+    if (startApiDay !== dayOfWeek) {
+        let daysUntil = dayOfWeek - startApiDay;
+        if (daysUntil <= 0) daysUntil += 7;
+        candidate.setDate(candidate.getDate() + daysUntil);
+    }
+    
+    if (intervalWeeks <= 1) return candidate;
+    
+    const startMonday = getISOWeekMonday(startDate);
+    for (let i = 0; i < 520; i++) {
+        const candidateMonday = getISOWeekMonday(candidate);
+        const weeksElapsed = Math.round((candidateMonday - startMonday) / (7 * 24 * 60 * 60 * 1000));
+        if (weeksElapsed % intervalWeeks === 0) return candidate;
+        candidate.setDate(candidate.getDate() + 7);
+    }
+    return candidate;
+}
+
+function updateStartDateHint() {
+    const hintEl = document.getElementById('start-date-hint');
+    if (!hintEl) return;
+    
+    const dayInput = document.getElementById('task-day-of-week');
+    const startDateInput = document.getElementById('task-start-date');
+    const intervalInput = document.getElementById('task-interval-weeks');
+    
+    const dayOfWeek = parseInt(dayInput.value);
+    const startDateStr = startDateInput.value;
+    const intervalWeeks = parseInt(intervalInput.value) || 1;
+    
+    if (dayOfWeek === -1 || !startDateStr) {
+        hintEl.textContent = '';
+        return;
+    }
+    
+    const startDate = new Date(startDateStr + 'T00:00:00');
+    if (isNaN(startDate.getTime())) {
+        hintEl.textContent = '';
+        return;
+    }
+    
+    const startJsDay = startDate.getDay();
+    const startApiDay = startJsDay === 0 ? 7 : startJsDay;
+    
+    if (startApiDay === dayOfWeek && intervalWeeks <= 1) {
+        hintEl.textContent = '';
+        return;
+    }
+    
+    const firstDate = computeFirstAppearanceDate(dayOfWeek, startDateStr, intervalWeeks);
+    if (!firstDate) {
+        hintEl.textContent = '';
+        return;
+    }
+    
+    const shortDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    const firstJsDay = firstDate.getDay();
+    const firstApiDay = firstJsDay === 0 ? 7 : firstJsDay;
+    const dayName = shortDays[firstApiDay - 1];
+    
+    const dd = String(firstDate.getDate()).padStart(2, '0');
+    const mm = String(firstDate.getMonth() + 1).padStart(2, '0');
+    const yyyy = firstDate.getFullYear();
+    
+    hintEl.textContent = `Erscheint erstmals am ${dayName}, ${dd}.${mm}.${yyyy}`;
 }
 
 function openModal(type, task = null) {
@@ -96,12 +202,7 @@ function openModal(type, task = null) {
         }
     }
     
-    dayInput.addEventListener('change', () => {
-        const value = dayInput.value;
-        intervalGroup.style.display = value === '-1' ? 'none' : 'block';
-        startDateGroup.style.display = value === '-1' ? 'none' : 'block';
-    });
-    
+    updateStartDateHint();
     modal.showModal();
 }
 

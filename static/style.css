@@ -1121,6 +1121,17 @@ dialog footer button.secondary:hover {
     margin-left: 0.25rem;
 }
 
+.start-date-hint {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.start-date-hint:empty {
+    display: none;
+}
+
 /* --- Calendar Section --- */
 #calendar-section {
     padding: 1rem 0;

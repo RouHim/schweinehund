@@ -1,3 +1,31 @@
+# [1.8.0](https://github.com/RouHim/schweinehund/compare/v1.7.0...v1.8.0) (2026-02-12)
+
+
+### Features
+
+* **frontend:** add start-date mismatch hint in task modal ([20e4021](https://github.com/RouHim/schweinehund/commit/20e402192be68787cb1ba6f0ea41c279d8d9c525))
+
+# [1.7.0](https://github.com/RouHim/schweinehund/compare/v1.6.0...v1.7.0) (2026-02-12)
+
+
+### Bug Fixes
+
+* **calendar:** remove aspect-ratio and fix grid overflow for all viewports ([74154d3](https://github.com/RouHim/schweinehund/commit/74154d3c9ac41c15ed875873b54a2d46093f66d7))
+* **ci:** align ntfy server for e2e and enforce rustfmt ([16ab2e7](https://github.com/RouHim/schweinehund/commit/16ab2e7772542f46eee9a5680c613c7ce71ac31a))
+* **config:** add NTFY_SERVER to Playwright and CI configs to prevent hitting real ntfy.sh ([d057f4c](https://github.com/RouHim/schweinehund/commit/d057f4cc41060f7e471d348f2b0eb8ddda3b35d7))
+* **db:** add busy_timeout and transaction to prevent SQLITE_BUSY on reset-all ([3204e09](https://github.com/RouHim/schweinehund/commit/3204e0997bcd2263346aa30cff4215337bf12760))
+* **notifications:** remove quiet hours check that always suppressed scheduler notifications ([c5e9b65](https://github.com/RouHim/schweinehund/commit/c5e9b654ddf28b3d537e18f85c7c6c2445ba6a57))
+* **ui:** center tab bar by moving justify-content to high-specificity PicoCSS override ([fbfb202](https://github.com/RouHim/schweinehund/commit/fbfb202e11e0dc287dd9edb67d1291e0c40cf1bb)), closes [hi#specificity](https://github.com/hi/issues/specificity)
+* **ui:** make tab bar full-width for true centering ([589d461](https://github.com/RouHim/schweinehund/commit/589d4619f96347c62f8a7f78804920b022c245b5))
+* **ui:** polish header — full-width tabs, pill indicator, mascot outline ([c6222a0](https://github.com/RouHim/schweinehund/commit/c6222a0bc34e7c64154847cac6826961f507ad77))
+* **ui:** remove empty badge bubbles on mini-routine daily tasks ([41d2e82](https://github.com/RouHim/schweinehund/commit/41d2e82dea2323c23a7ba6dbf95609e9543a4d66))
+* **ui:** replace mascot white glow with drop shadow ([3d5a313](https://github.com/RouHim/schweinehund/commit/3d5a31346445e95a35f9135a73daa3886866cf13))
+
+
+### Features
+
+* **calendar:** add day detail modal showing full task info on click ([f8ab193](https://github.com/RouHim/schweinehund/commit/f8ab19373d1126aebf391ff0f7c93fef312e0d1a)), closes [#fun-fact-modal](https://github.com/RouHim/schweinehund/issues/fun-fact-modal)
+
 # [1.6.0](https://github.com/RouHim/schweinehund/compare/v1.5.0...v1.6.0) (2026-02-11)
 
 
