@@ -73,9 +73,10 @@ header {
 
 .header-content {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     gap: 1rem;
+    position: relative;
 }
 
 .title-section {
@@ -132,6 +133,10 @@ h2 {
     padding: 0;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .theme-toggle:hover {
