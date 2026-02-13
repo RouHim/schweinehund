@@ -141,11 +141,11 @@ h2 {
 
 .theme-toggle:hover {
     background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.08);
+    transform: translateY(-50%) scale(1.08);
 }
 
 .theme-toggle:active {
-    transform: scale(0.92);
+    transform: translateY(-50%) scale(0.92);
 }
 
 .theme-icon {

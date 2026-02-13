@@ -151,6 +151,7 @@ test.describe('Start Date Hint Feature', () => {
     
     await page.locator('[data-testid="task-name-input"]').fill('Empty Date Task');
     await page.locator('[data-testid="task-day-select"]').selectOption('4');
+    await page.locator('[data-testid="start-date-input"]').fill('');
     
     const hint = page.locator('[data-testid="start-date-hint"]');
     await expect(hint).toHaveText('');
