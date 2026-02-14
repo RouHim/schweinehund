@@ -28,8 +28,11 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Running database migrations");
     db::run_migrations(&pool).await?;
 
-    tracing::info!("Starting weekly reset scheduler");
+    tracing::info!("Starting daily reset scheduler");
     let _scheduler_handle = scheduler::start_scheduler(pool.clone());
+
+    tracing::info!("Starting notification scheduler");
+    let _notification_handle = scheduler::start_notification_scheduler(pool.clone());
 
     let api = routes::api_routes(pool);
     let static_files = assets::serve_embedded();
