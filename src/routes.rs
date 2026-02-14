@@ -120,6 +120,7 @@ pub fn api_routes(
         .or(delete_task(pool.clone()))
         .or(debug_reset(pool.clone()))
         .or(debug_reset_all(pool.clone()))
+        .or(debug_trigger_notification(pool.clone()))
         .or(debug_notify_status(pool.clone()))
         .or(debug_notify(pool))
         .with(cors)
@@ -437,6 +438,9 @@ async fn handle_update_settings(
     update: SettingsUpdate,
     pool: SqlitePool,
 ) -> Result<impl Reply, Rejection> {
+    chrono::NaiveTime::parse_from_str(&update.notification_time, "%H:%M")
+        .map_err(|_| reject::custom(BadRequest))?;
+
     let settings = db::AppSettings {
         notification_enabled: update.notification_enabled,
         notification_time: update.notification_time,
@@ -617,6 +621,25 @@ async fn handle_debug_reset(pool: SqlitePool) -> Result<impl Reply, Rejection> {
 
     Ok(warp::reply::json(&SuccessResponse {
         message: "Daily tasks reset successfully".to_string(),
+    }))
+}
+
+fn debug_trigger_notification(
+    pool: SqlitePool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "debug" / "trigger-notification")
+        .and(warp::post())
+        .and(with_db(pool))
+        .and_then(handle_trigger_notification)
+}
+
+async fn handle_trigger_notification(pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    crate::notifications::send_daily_reminder(&pool)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&SuccessResponse {
+        message: "notification_triggered".to_string(),
     }))
 }
 
@@ -972,6 +995,54 @@ mod tests {
             task.start_date,
             Some("2026-02-09".to_string()),
             "Should preserve existing start_date when None is passed"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_rejects_invalid_time() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_time: "25:99".to_string(),
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(
+            result.is_err(),
+            "Should reject invalid HH:MM format like 25:99"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_rejects_non_time_string() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_time: "not-a-time".to_string(),
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(result.is_err(), "Should reject non-time string format");
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_accepts_valid_time() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_time: "14:30".to_string(),
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(
+            result.is_ok(),
+            "Should accept valid HH:MM format like 14:30"
         );
     }
 }

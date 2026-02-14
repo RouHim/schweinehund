@@ -22,6 +22,16 @@ test.describe('Notification Debug Endpoints', () => {
     expect(json.server).toContain('localhost:8199');
   });
 
+  test('debug trigger-notification returns 200 with notification_triggered message', async ({ request }) => {
+    const response = await request.post('/api/debug/trigger-notification');
+    
+    expect(response.status()).toBe(200);
+    
+    const json = await response.json();
+    expect(json).toHaveProperty('message');
+    expect(json.message).toBe('notification_triggered');
+  });
+
   test('debug notify sends test notification and delivers to local ntfy', async ({ request }) => {
     // Check if ntfy is reachable
     let ntfyAvailable = false;

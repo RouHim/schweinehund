@@ -437,6 +437,40 @@ pub async fn set_last_reset(pool: &SqlitePool, timestamp: i64) -> Result<()> {
     Ok(())
 }
 
+/// Get the last notification timestamp from app_state
+pub async fn get_last_notification_at(pool: &SqlitePool) -> Result<i64> {
+    let row: (String,) = sqlx::query_as(
+        r#"
+        SELECT value
+        FROM app_state
+        WHERE key = 'last_notification_at'
+        "#,
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let timestamp = row.0.parse::<i64>()?;
+    Ok(timestamp)
+}
+
+/// Update the last notification timestamp in app_state
+pub async fn set_last_notification_at(pool: &SqlitePool, timestamp: i64) -> Result<()> {
+    let timestamp_str = timestamp.to_string();
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = ?
+        WHERE key = 'last_notification_at'
+        "#,
+    )
+    .bind(timestamp_str)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 /// Get app settings from app_state table
 pub async fn get_app_settings(pool: &SqlitePool) -> Result<AppSettings> {
     let notification_enabled: (String,) = sqlx::query_as(
@@ -840,6 +874,16 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
         UPDATE app_state
         SET value = '0'
         WHERE key = 'last_reset_at'
+        "#,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = '0'
+        WHERE key = 'last_notification_at'
         "#,
     )
     .execute(&mut *tx)
@@ -1628,6 +1672,46 @@ pub mod tests {
         assert_eq!(jan[30].date, "2026-01-31");
         assert_eq!(feb[0].date, "2026-02-01");
         assert_eq!(feb[27].date, "2026-02-28");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_last_notification_at_default() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let initial = get_last_notification_at(&pool).await?;
+        assert_eq!(initial, 0);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get_last_notification_at() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let now = chrono::Utc::now().timestamp();
+        set_last_notification_at(&pool, now).await?;
+
+        let after = get_last_notification_at(&pool).await?;
+        assert_eq!(after, now);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_all_data_clears_last_notification_at() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let now = chrono::Utc::now().timestamp();
+        set_last_notification_at(&pool, now).await?;
+        let before_reset = get_last_notification_at(&pool).await?;
+        assert!(before_reset > 0);
+
+        reset_all_data(&pool).await?;
+
+        let after_reset = get_last_notification_at(&pool).await?;
+        assert_eq!(after_reset, 0);
 
         Ok(())
     }
