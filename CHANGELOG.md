@@ -1,3 +1,11 @@
+# [1.9.0](https://github.com/RouHim/schweinehund/compare/v1.8.1...v1.9.0) (2026-02-14)
+
+
+### Features
+
+* decouple notifications from reset scheduler and fire at configured time ([e9f90d4](https://github.com/RouHim/schweinehund/commit/e9f90d4a49f774e0a57e13aea8710eb8cc0bd5cf))
+* **main:** wire notification scheduler on startup ([36bd15f](https://github.com/RouHim/schweinehund/commit/36bd15f7e537095e8afda33a059679eacec78abd))
+
 ## [1.8.1](https://github.com/RouHim/schweinehund/compare/v1.8.0...v1.8.1) (2026-02-13)
 
 
