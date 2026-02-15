@@ -100,6 +100,46 @@ test.describe('Overview Feature', () => {
     await expect(allDailyTasksList.locator('.task-name', { hasText: updatedName })).toBeVisible();
   });
 
+  test('allows editing a deep cleaning task from overview', async ({ page }) => {
+    const tabAll = page.locator('[data-testid="tab-all"]');
+    await tabAll.click();
+    
+    const allDeepTasksList = page.locator('[data-testid="all-deep-tasks-list"]');
+    await expect(allDeepTasksList).toBeVisible();
+    
+    const firstTask = allDeepTasksList.locator('.task-item').first();
+    const originalName = await firstTask.locator('.task-name').textContent();
+    
+    const editButton = firstTask.locator('[data-testid="edit-btn"]');
+    await editButton.click();
+    
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+    
+    const nameInput = page.locator('[data-testid="task-name-input"]');
+    const currentValue = await nameInput.inputValue();
+    expect(currentValue).toBe(originalName);
+    
+    const updatedName = `Edited from Overview ${Date.now()}`;
+    await nameInput.fill(updatedName);
+    
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/deep-cleaning/') && response.request().method() === 'PUT'
+    );
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    const response = await responsePromise;
+    
+    expect(response.ok()).toBe(true);
+    
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    
+    const tabToday = page.locator('[data-testid="tab-today"]');
+    await tabToday.click();
+    await tabAll.click();
+    
+    await expect(allDeepTasksList.locator('.task-name', { hasText: updatedName })).toBeVisible();
+  });
+
   test('allows deleting a task from overview', async ({ page }) => {
     const addButton = page.locator('[data-testid="add-daily-task-btn"]');
     await addButton.click();
@@ -148,6 +188,44 @@ test.describe('Overview Feature', () => {
     expect(updatedCount).toBe(initialCount - 1);
     
     const deletedTask = allDailyTasksList.locator('.task-name', { hasText: testTaskName });
+    await expect(deletedTask).not.toBeVisible();
+  });
+
+  test('allows deleting a deep cleaning task from overview', async ({ page }) => {
+    const tabAll = page.locator('[data-testid="tab-all"]');
+    await tabAll.click();
+    
+    const allDeepTasksList = page.locator('[data-testid="all-deep-tasks-list"]');
+    await expect(allDeepTasksList).toBeVisible();
+    
+    const initialCount = await allDeepTasksList.locator('.task-item').count();
+    expect(initialCount).toBeGreaterThan(0);
+    
+    const firstTask = allDeepTasksList.locator('.task-item').first();
+    const taskName = await firstTask.locator('.task-name').textContent();
+    
+    page.on('dialog', dialog => {
+      expect(dialog.message()).toContain('Möchtest du diese Aufgabe wirklich löschen?');
+      dialog.accept();
+    });
+    
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/deep-cleaning/') && response.request().method() === 'DELETE'
+    );
+    
+    const deleteButton = firstTask.locator('[data-testid="delete-btn"]');
+    await deleteButton.click();
+    
+    await responsePromise;
+    
+    const tabToday = page.locator('[data-testid="tab-today"]');
+    await tabToday.click();
+    await tabAll.click();
+    
+    const updatedCount = await allDeepTasksList.locator('.task-item').count();
+    expect(updatedCount).toBe(initialCount - 1);
+    
+    const deletedTask = allDeepTasksList.locator('.task-name', { hasText: taskName || '' });
     await expect(deletedTask).not.toBeVisible();
   });
 

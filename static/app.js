@@ -550,34 +550,39 @@ function renderAllTasks() {
     }).join('');
     
     // Attach listeners for all-tasks-section edit/delete buttons
-    const allTasksSection = document.getElementById('all-tasks-section');
-    if (allTasksSection) {
-        allTasksSection.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = parseInt(btn.dataset.taskId);
-                let task = state.allDailyTasks.find(t => t.id === id);
-                let type = 'daily';
-                if (!task) {
-                    task = state.allDeepTasks.find(t => t.id === id);
-                    type = 'deep';
-                }
-                if (task) window.openModal(type, task);
-            });
+    dailyList.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            const task = state.allDailyTasks.find(t => t.id === id);
+            if (task) window.openModal('daily', task);
         });
+    });
 
-        allTasksSection.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = parseInt(btn.dataset.taskId);
-                let type = 'daily';
-                if (!state.allDailyTasks.find(t => t.id === id)) {
-                    type = 'deep';
-                }
-                deleteTask(type, id);
-            });
+    dailyList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            deleteTask('daily', id);
         });
-    }
+    });
+
+    deepList.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            const task = state.allDeepTasks.find(t => t.id === id);
+            if (task) window.openModal('deep-cleaning', task);
+        });
+    });
+
+    deepList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.taskId);
+            deleteTask('deep-cleaning', id);
+        });
+    });
 }
 
 async function fetchDeepCleaning() {
