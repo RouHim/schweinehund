@@ -140,6 +140,36 @@ test.describe('Overview Feature', () => {
     await expect(allDeepTasksList.locator('.task-name', { hasText: updatedName })).toBeVisible();
   });
 
+  test('overview auto-refreshes after editing a task', async ({ page }) => {
+    const tabAll = page.locator('[data-testid="tab-all"]');
+    await tabAll.click();
+
+    const allDeepTasksList = page.locator('[data-testid="all-deep-tasks-list"]');
+    await expect(allDeepTasksList).toBeVisible();
+
+    const firstTask = allDeepTasksList.locator('.task-item').first();
+    const editButton = firstTask.locator('[data-testid="edit-btn"]');
+    await editButton.click();
+
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+
+    const updatedName = `Auto-Refresh Test ${Date.now()}`;
+    const nameInput = page.locator('[data-testid="task-name-input"]');
+    await nameInput.fill(updatedName);
+
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/deep-cleaning/') && response.request().method() === 'PUT'
+    );
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    await responsePromise;
+
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+
+    // NO tab-switch — verify overview updates in place
+    await expect(allDeepTasksList.locator('.task-name', { hasText: updatedName })).toBeVisible({ timeout: 5000 });
+  });
+
   test('allows deleting a task from overview', async ({ page }) => {
     const addButton = page.locator('[data-testid="add-daily-task-btn"]');
     await addButton.click();

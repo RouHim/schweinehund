@@ -269,6 +269,7 @@ async function handleTaskSubmit(event) {
         } else {
             fetchDeepCleaning();
         }
+        fetchAllTasks();
         
     } catch (error) {
         console.error('Fehler beim Speichern der Aufgabe:', error);
@@ -372,6 +373,7 @@ async function deleteTask(type, id) {
         } else {
             await fetchDeepCleaning();
         }
+        await fetchAllTasks();
     } catch (error) {
         console.error('Fehler beim Löschen der Aufgabe:', error);
         alert(`Aufgabe konnte nicht gelöscht werden: ${error.message}`);
