@@ -1,3 +1,11 @@
+## [1.9.1](https://github.com/RouHim/schweinehund/compare/v1.9.0...v1.9.1) (2026-02-15)
+
+
+### Bug Fixes
+
+* **frontend:** refresh overview tab after task save and delete ([f8ddbda](https://github.com/RouHim/schweinehund/commit/f8ddbdafc53b9cb84a7bf9a3346b2ef49210c56c))
+* **frontend:** resolve ID collision in overview tab edit/delete handlers ([39f6d31](https://github.com/RouHim/schweinehund/commit/39f6d319727fd3445298481ba26d263e4a4762d1))
+
 # [1.9.0](https://github.com/RouHim/schweinehund/compare/v1.8.1...v1.9.0) (2026-02-14)
 
 
