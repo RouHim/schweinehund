@@ -310,4 +310,94 @@ test.describe('Overview Feature', () => {
     });
     await expect(taskInTodayView.locator('.task-description', { hasText: updatedDescription })).toBeVisible();
   });
+
+  test('allows creating a daily task from overview', async ({ page }) => {
+    const tabAll = page.locator('[data-testid="tab-all"]');
+    await tabAll.click();
+    
+    const allDailyTasksList = page.locator('[data-testid="all-daily-tasks-list"]');
+    await expect(allDailyTasksList).toBeVisible();
+    
+    const addButton = page.locator('[data-testid="add-all-daily-task-btn"]');
+    await addButton.click();
+    
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+    
+    const testTaskName = `Daily from Overview ${Date.now()}`;
+    await page.locator('[data-testid="task-name-input"]').fill(testTaskName);
+    await page.locator('[data-testid="task-day-select"]').selectOption('-1');
+    
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/tasks') && response.request().method() === 'POST'
+    );
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    await responsePromise;
+    
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    
+    await expect(allDailyTasksList.locator('.task-name', { hasText: testTaskName })).toBeVisible();
+  });
+
+  test('allows creating a deep cleaning task from overview', async ({ page }) => {
+    const tabAll = page.locator('[data-testid="tab-all"]');
+    await tabAll.click();
+    
+    const allDeepTasksList = page.locator('[data-testid="all-deep-tasks-list"]');
+    await expect(allDeepTasksList).toBeVisible();
+    
+    const addButton = page.locator('[data-testid="add-all-deep-cleaning-btn"]');
+    await addButton.click();
+    
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+    
+    const testTaskName = `Deep from Overview ${Date.now()}`;
+    await page.locator('[data-testid="task-name-input"]').fill(testTaskName);
+    
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/deep-cleaning') && response.request().method() === 'POST'
+    );
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    await responsePromise;
+    
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    
+    await expect(allDeepTasksList.locator('.task-name', { hasText: testTaskName })).toBeVisible();
+  });
+
+  test('daily task created from overview appears in Heute', async ({ page }) => {
+    const currentDay = await page.evaluate(() => {
+      const jsDay = new Date().getDay();
+      return jsDay === 0 ? '7' : String(jsDay);
+    });
+    
+    const tabAll = page.locator('[data-testid="tab-all"]');
+    await tabAll.click();
+    
+    const addButton = page.locator('[data-testid="add-all-daily-task-btn"]');
+    await addButton.click();
+    
+    const modal = page.locator('#task-modal');
+    await expect(modal).toBeVisible();
+    
+    const testTaskName = `Cross-Tab Sync ${Date.now()}`;
+    await page.locator('[data-testid="task-name-input"]').fill(testTaskName);
+    await page.locator('[data-testid="task-day-select"]').selectOption(currentDay);
+    
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/tasks') && response.request().method() === 'POST'
+    );
+    await page.locator('[data-testid="modal-save-btn"]').click();
+    await responsePromise;
+    
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
+    
+    const tabToday = page.locator('[data-testid="tab-today"]');
+    await tabToday.click();
+    
+    const todayTasksList = page.locator('#tasks-list');
+    await expect(todayTasksList).toBeVisible();
+    await expect(todayTasksList.locator('.task-name', { hasText: testTaskName })).toBeVisible();
+  });
 });
