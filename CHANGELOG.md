@@ -1,3 +1,11 @@
+# [1.10.0](https://github.com/RouHim/schweinehund/compare/v1.9.1...v1.10.0) (2026-02-21)
+
+
+### Features
+
+* **notifications:** support up to 3 notification times per day ([4675848](https://github.com/RouHim/schweinehund/commit/46758481dbd69e961a1d395b18812f44cef913de))
+* **ui:** add create task buttons to Alle Aufgaben tab ([6dde10d](https://github.com/RouHim/schweinehund/commit/6dde10df9f30f35646c22f7af1f9520ab8de91b4))
+
 ## [1.9.1](https://github.com/RouHim/schweinehund/compare/v1.9.0...v1.9.1) (2026-02-15)
 
 
