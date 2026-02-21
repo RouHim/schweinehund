@@ -1,4 +1,4 @@
-const CACHE_NAME = 'schweinehund-v2';
+const CACHE_NAME = 'schweinehund-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

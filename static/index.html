@@ -22,15 +22,15 @@
                     </div>
                     <h1>Schweinehund</h1>
                 </div>
-                <button id="theme-toggle" class="theme-toggle" aria-label="Design wechseln">
+                <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Design wechseln">
                     <span class="theme-icon">🌙</span>
                 </button>
             </div>
         </div>
         <nav class="tab-bar">
-            <button data-tab="today" data-testid="tab-today" class="tab active">Heute</button>
-            <button data-tab="all" data-testid="tab-all" class="tab">Alle Aufgaben</button>
-            <button data-tab="calendar" data-testid="tab-calendar" class="tab">Kalender</button>
+            <button type="button" data-tab="today" data-testid="tab-today" class="tab active">Heute</button>
+            <button type="button" data-tab="all" data-testid="tab-all" class="tab">Alle Aufgaben</button>
+            <button type="button" data-tab="calendar" data-testid="tab-calendar" class="tab">Kalender</button>
         </nav>
     </header>
 
@@ -39,7 +39,7 @@
         <section id="today-section">
             <div class="section-header">
                 <h2>Heutige Aufgaben</h2>
-                <button id="add-daily-task-btn" class="add-btn" data-testid="add-daily-task-btn" aria-label="Tägliche Aufgabe hinzufügen">+ Neu</button>
+                <button type="button" id="add-daily-task-btn" class="add-btn" data-testid="add-daily-task-btn" aria-label="Tägliche Aufgabe hinzufügen">+ Neu</button>
             </div>
             <div class="progress-container" id="tasks-progress" style="display: none;">
                 <div class="progress-text">
@@ -59,7 +59,7 @@
         <section id="deep-cleaning-section">
             <div class="section-header">
                 <h2>Grundreinigung</h2>
-                <button id="add-deep-cleaning-btn" class="add-btn" data-testid="add-deep-cleaning-btn" aria-label="Grundreinigung hinzufügen">+ Neu</button>
+                <button type="button" id="add-deep-cleaning-btn" class="add-btn" data-testid="add-deep-cleaning-btn" aria-label="Grundreinigung hinzufügen">+ Neu</button>
             </div>
             <div id="deep-cleaning-loading" class="loading">Grundreinigung wird geladen...</div>
             <div id="deep-cleaning-error" class="error" style="display: none;"></div>
@@ -79,10 +79,11 @@
                         <span class="toggle-slider"></span>
                     </div>
                 </div>
-                <label for="notification-time">
-                    Benachrichtigungszeit
-                    <input type="time" id="notification-time" name="notification_time">
-                </label>
+                <div class="notification-times-section">
+                    <label>Benachrichtigungszeiten</label>
+                    <div id="notification-times-list" data-testid="notification-times-list"></div>
+                    <button type="button" id="add-notification-time" data-testid="add-notification-time" class="add-time-btn">+ Zeit hinzufuegen</button>
+                </div>
                 <button type="submit">Einstellungen speichern</button>
             </form>
         </section>
@@ -149,7 +150,7 @@
         <article>
             <header>
                 <h3>🎉 Alle Aufgaben erledigt!</h3>
-                <button class="close-button" onclick="closeFunFactModal()" data-testid="fun-fact-close-btn" aria-label="Schließen">×</button>
+                <button type="button" class="close-button" onclick="closeFunFactModal()" data-testid="fun-fact-close-btn" aria-label="Schließen">×</button>
             </header>
             <div class="fun-fact-content">
                 <p id="fun-fact-text" data-testid="fun-fact-text"></p>
@@ -161,7 +162,7 @@
         <article>
             <header>
                 <h3 id="calendar-day-modal-title" data-testid="calendar-day-modal-title"></h3>
-                <button class="close-button" data-testid="calendar-day-modal-close" aria-label="Schließen">×</button>
+                <button type="button" class="close-button" data-testid="calendar-day-modal-close" aria-label="Schließen">×</button>
             </header>
             <div class="calendar-day-modal-content" data-testid="calendar-day-modal-tasks">
                 <!-- Populated by JS -->
@@ -172,22 +173,22 @@
     <section id="all-tasks-section" style="display:none;">
         <div class="section-header">
             <h2>Tägliche Aufgaben</h2>
-            <button id="add-all-daily-task-btn" class="add-btn" data-testid="add-all-daily-task-btn" aria-label="Tägliche Aufgabe hinzufügen">+ Neu</button>
+            <button type="button" id="add-all-daily-task-btn" class="add-btn" data-testid="add-all-daily-task-btn" aria-label="Tägliche Aufgabe hinzufügen">+ Neu</button>
         </div>
         <ul id="all-daily-tasks-list" class="task-list" data-testid="all-daily-tasks-list"></ul>
         
         <div class="section-header">
             <h2>Grundreinigung</h2>
-            <button id="add-all-deep-cleaning-btn" class="add-btn" data-testid="add-all-deep-cleaning-btn" aria-label="Grundreinigung hinzufügen">+ Neu</button>
+            <button type="button" id="add-all-deep-cleaning-btn" class="add-btn" data-testid="add-all-deep-cleaning-btn" aria-label="Grundreinigung hinzufügen">+ Neu</button>
         </div>
         <ul id="all-deep-tasks-list" class="task-list" data-testid="all-deep-tasks-list"></ul>
     </section>
 
     <section id="calendar-section" data-testid="calendar-section" style="display:none;">
         <div class="calendar-controls">
-            <button id="calendar-prev-btn" class="calendar-nav-btn" data-testid="calendar-prev-btn" aria-label="Vorheriger Monat">‹</button>
+            <button type="button" id="calendar-prev-btn" class="calendar-nav-btn" data-testid="calendar-prev-btn" aria-label="Vorheriger Monat">‹</button>
             <h2 id="calendar-month-label" data-testid="calendar-month-label">Januar 2026</h2>
-            <button id="calendar-next-btn" class="calendar-nav-btn" data-testid="calendar-next-btn" aria-label="Nächster Monat">›</button>
+            <button type="button" id="calendar-next-btn" class="calendar-nav-btn" data-testid="calendar-next-btn" aria-label="Nächster Monat">›</button>
         </div>
         <div class="calendar-grid" id="calendar-grid" data-testid="calendar-grid">
             <!-- Populated by JavaScript -->

@@ -132,10 +132,10 @@ pub fn start_scheduler(pool: SqlitePool) -> JoinHandle<()> {
 }
 
 /// Pure function to determine if a notification should be sent
-fn should_send_notification(
+fn should_send_notification_for_time(
     notification_enabled: bool,
     notification_time: &str,
-    last_sent_timestamp: i64,
+    last_sent_for_time: i64,
     now: chrono::DateTime<chrono::Local>,
 ) -> bool {
     if !notification_enabled {
@@ -151,8 +151,8 @@ fn should_send_notification(
         return false;
     }
 
-    if last_sent_timestamp > 0 {
-        if let Some(last_sent_dt) = chrono::DateTime::from_timestamp(last_sent_timestamp, 0) {
+    if last_sent_for_time > 0 {
+        if let Some(last_sent_dt) = chrono::DateTime::from_timestamp(last_sent_for_time, 0) {
             let last_sent_local = last_sent_dt.with_timezone(&chrono::Local);
             if last_sent_local.date_naive() == now.date_naive() {
                 return false;
@@ -177,38 +177,52 @@ pub fn start_notification_scheduler(pool: SqlitePool) -> JoinHandle<()> {
                 }
             };
 
-            let last_sent = match crate::db::get_last_notification_at(&pool).await {
-                Ok(ts) => ts,
+            let last_notification_times = match crate::db::get_last_notification_times(&pool).await
+            {
+                Ok(times) => times,
                 Err(e) => {
-                    tracing::error!("Failed to get last_notification_at: {}", e);
+                    tracing::error!("Failed to get last_notification_times: {}", e);
                     continue;
                 }
             };
 
             let now = chrono::Local::now();
 
-            if !should_send_notification(
-                settings.notification_enabled,
-                &settings.notification_time,
-                last_sent,
-                now,
-            ) {
-                continue;
-            }
+            for notification_time in &settings.notification_times {
+                let last_sent_for_time =
+                    *last_notification_times.get(notification_time).unwrap_or(&0);
 
-            if let Err(e) = crate::notifications::send_daily_reminder(&pool).await {
-                tracing::warn!("Failed to send notification: {}", e);
-                continue;
-            }
+                if !should_send_notification_for_time(
+                    settings.notification_enabled,
+                    notification_time,
+                    last_sent_for_time,
+                    now,
+                ) {
+                    continue;
+                }
 
-            if let Err(e) = crate::db::set_last_notification_at(&pool, now.timestamp()).await {
-                tracing::error!("Failed to update last_notification_at: {}", e);
-            }
+                if let Err(e) = crate::notifications::send_daily_reminder(&pool).await {
+                    tracing::warn!(
+                        "Failed to send notification for time {}: {}",
+                        notification_time,
+                        e
+                    );
+                    continue;
+                }
 
-            tracing::info!(
-                "Notification sent at configured time {}",
-                settings.notification_time
-            );
+                if let Err(e) =
+                    crate::db::set_last_notification_time(&pool, notification_time, now.timestamp())
+                        .await
+                {
+                    tracing::error!(
+                        "Failed to update last_notification_times for {}: {}",
+                        notification_time,
+                        e
+                    );
+                }
+
+                tracing::info!("Notification sent at configured time {}", notification_time);
+            }
         }
     })
 }
@@ -276,7 +290,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = should_send_notification(true, "09:00", 0, now);
+        let result = should_send_notification_for_time(true, "09:00", 0, now);
         assert!(result);
     }
 
@@ -293,7 +307,7 @@ mod tests {
 
         let last_sent = now.timestamp();
 
-        let result = should_send_notification(true, "09:00", last_sent, now);
+        let result = should_send_notification_for_time(true, "09:00", last_sent, now);
         assert!(!result);
     }
 
@@ -308,7 +322,7 @@ mod tests {
             )
             .unwrap();
 
-        let result = should_send_notification(true, "09:00", 0, now);
+        let result = should_send_notification_for_time(true, "09:00", 0, now);
         assert!(!result);
     }
 
@@ -323,7 +337,79 @@ mod tests {
             )
             .unwrap();
 
-        let result = should_send_notification(false, "09:00", 0, now);
+        let result = should_send_notification_for_time(false, "09:00", 0, now);
         assert!(!result);
+    }
+
+    #[test]
+    fn test_two_times_same_day_both_fire() {
+        let morning = Local
+            .from_local_datetime(
+                &NaiveDate::from_ymd_opt(2025, 1, 8)
+                    .unwrap()
+                    .and_hms_opt(9, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap();
+        let evening = Local
+            .from_local_datetime(
+                &NaiveDate::from_ymd_opt(2025, 1, 8)
+                    .unwrap()
+                    .and_hms_opt(18, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap();
+
+        let morning_result = should_send_notification_for_time(true, "09:00", 0, morning);
+        let evening_result = should_send_notification_for_time(true, "18:00", 0, evening);
+
+        assert!(morning_result);
+        assert!(evening_result);
+    }
+
+    #[test]
+    fn test_dedup_per_time_independent() {
+        let now = Local
+            .from_local_datetime(
+                &NaiveDate::from_ymd_opt(2025, 1, 8)
+                    .unwrap()
+                    .and_hms_opt(18, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap();
+        let sent_today = Local
+            .from_local_datetime(
+                &NaiveDate::from_ymd_opt(2025, 1, 8)
+                    .unwrap()
+                    .and_hms_opt(9, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap()
+            .timestamp();
+
+        let morning_result = should_send_notification_for_time(true, "09:00", sent_today, now);
+        let evening_result = should_send_notification_for_time(true, "18:00", 0, now);
+
+        assert!(!morning_result);
+        assert!(evening_result);
+    }
+
+    #[test]
+    fn test_empty_notification_times_no_crash() {
+        let now = Local
+            .from_local_datetime(
+                &NaiveDate::from_ymd_opt(2025, 1, 8)
+                    .unwrap()
+                    .and_hms_opt(9, 0, 0)
+                    .unwrap(),
+            )
+            .unwrap();
+        let notification_times: Vec<String> = Vec::new();
+
+        let should_send_any = notification_times
+            .iter()
+            .any(|time| should_send_notification_for_time(true, time, 0, now));
+
+        assert!(!should_send_any);
     }
 }

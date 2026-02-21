@@ -1,7 +1,7 @@
 use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use std::convert::Infallible;
+use std::{collections::HashSet, convert::Infallible};
 use warp::{http::StatusCode, reject, Filter, Rejection, Reply};
 
 use crate::{db, notifications};
@@ -37,13 +37,13 @@ struct SuccessResponse {
 #[derive(Deserialize)]
 struct SettingsUpdate {
     notification_enabled: bool,
-    notification_time: String,
+    notification_times: Vec<String>,
 }
 
 #[derive(Serialize)]
 struct SettingsResponse {
     notification_enabled: bool,
-    notification_time: String,
+    notification_times: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -420,7 +420,7 @@ async fn handle_get_settings(pool: SqlitePool) -> Result<impl Reply, Rejection> 
 
     Ok(warp::reply::json(&SettingsResponse {
         notification_enabled: settings.notification_enabled,
-        notification_time: settings.notification_time,
+        notification_times: settings.notification_times,
     }))
 }
 
@@ -438,12 +438,22 @@ async fn handle_update_settings(
     update: SettingsUpdate,
     pool: SqlitePool,
 ) -> Result<impl Reply, Rejection> {
-    chrono::NaiveTime::parse_from_str(&update.notification_time, "%H:%M")
-        .map_err(|_| reject::custom(BadRequest))?;
+    if update.notification_times.len() > 3 {
+        return Err(reject::custom(BadRequest));
+    }
+
+    let mut seen_times = HashSet::new();
+    for time in &update.notification_times {
+        chrono::NaiveTime::parse_from_str(time, "%H:%M").map_err(|_| reject::custom(BadRequest))?;
+
+        if !seen_times.insert(time.as_str()) {
+            return Err(reject::custom(BadRequest));
+        }
+    }
 
     let settings = db::AppSettings {
         notification_enabled: update.notification_enabled,
-        notification_time: update.notification_time,
+        notification_times: update.notification_times,
     };
 
     db::update_app_settings(&pool, &settings)
@@ -452,7 +462,7 @@ async fn handle_update_settings(
 
     Ok(warp::reply::json(&SettingsResponse {
         notification_enabled: settings.notification_enabled,
-        notification_time: settings.notification_time,
+        notification_times: settings.notification_times,
     }))
 }
 
@@ -1005,7 +1015,7 @@ mod tests {
 
         let req = SettingsUpdate {
             notification_enabled: true,
-            notification_time: "25:99".to_string(),
+            notification_times: vec!["25:99".to_string()],
         };
 
         let result = handle_update_settings(req, pool).await;
@@ -1022,7 +1032,7 @@ mod tests {
 
         let req = SettingsUpdate {
             notification_enabled: true,
-            notification_time: "not-a-time".to_string(),
+            notification_times: vec!["not-a-time".to_string()],
         };
 
         let result = handle_update_settings(req, pool).await;
@@ -1036,7 +1046,7 @@ mod tests {
 
         let req = SettingsUpdate {
             notification_enabled: true,
-            notification_time: "14:30".to_string(),
+            notification_times: vec!["14:30".to_string()],
         };
 
         let result = handle_update_settings(req, pool).await;
@@ -1044,5 +1054,70 @@ mod tests {
             result.is_ok(),
             "Should accept valid HH:MM format like 14:30"
         );
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_rejects_more_than_3_times() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_times: vec![
+                "08:00".to_string(),
+                "10:00".to_string(),
+                "14:00".to_string(),
+                "18:00".to_string(),
+            ],
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(result.is_err(), "Should reject more than 3 times");
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_rejects_duplicate_times() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_times: vec!["09:00".to_string(), "09:00".to_string()],
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(result.is_err(), "Should reject duplicate times");
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_accepts_empty_times() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_times: vec![],
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(result.is_ok(), "Should accept empty notification times");
+    }
+
+    #[tokio::test]
+    async fn test_update_settings_accepts_three_valid_times() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let req = SettingsUpdate {
+            notification_enabled: true,
+            notification_times: vec![
+                "08:00".to_string(),
+                "12:00".to_string(),
+                "18:00".to_string(),
+            ],
+        };
+
+        let result = handle_update_settings(req, pool).await;
+        assert!(result.is_ok(), "Should accept 3 valid notification times");
     }
 }

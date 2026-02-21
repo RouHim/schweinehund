@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use anyhow::Result;
 use chrono::Datelike;
@@ -56,7 +56,7 @@ pub struct DeepCleaningTask {
 #[derive(Debug, Clone)]
 pub struct AppSettings {
     pub notification_enabled: bool,
-    pub notification_time: String,
+    pub notification_times: Vec<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -483,19 +483,36 @@ pub async fn get_app_settings(pool: &SqlitePool) -> Result<AppSettings> {
     .fetch_one(pool)
     .await?;
 
-    let notification_time: (String,) = sqlx::query_as(
+    let notification_times: Option<(String,)> = sqlx::query_as(
         r#"
         SELECT value
         FROM app_state
-        WHERE key = 'notification_time'
+        WHERE key = 'notification_times'
         "#,
     )
-    .fetch_one(pool)
+    .fetch_optional(pool)
     .await?;
+
+    let parsed_notification_times = match notification_times {
+        Some((value,)) => match serde_json::from_str::<Vec<String>>(&value) {
+            Ok(times) => times,
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to parse notification_times setting as JSON array: {}",
+                    error
+                );
+                vec!["09:00".to_string()]
+            }
+        },
+        None => {
+            tracing::warn!("Missing notification_times setting, using default");
+            vec!["09:00".to_string()]
+        }
+    };
 
     Ok(AppSettings {
         notification_enabled: notification_enabled.0 == "true",
-        notification_time: notification_time.0,
+        notification_times: parsed_notification_times,
     })
 }
 
@@ -518,14 +535,59 @@ pub async fn update_app_settings(pool: &SqlitePool, settings: &AppSettings) -> R
     .execute(pool)
     .await?;
 
+    let notification_times_json = serde_json::to_string(&settings.notification_times)?;
+
     sqlx::query(
         r#"
         UPDATE app_state
         SET value = ?
-        WHERE key = 'notification_time'
+        WHERE key = 'notification_times'
         "#,
     )
-    .bind(&settings.notification_time)
+    .bind(notification_times_json)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+pub async fn get_last_notification_times(pool: &SqlitePool) -> Result<HashMap<String, i64>> {
+    let row: Option<(String,)> = sqlx::query_as(
+        r#"
+        SELECT value
+        FROM app_state
+        WHERE key = 'last_notification_times'
+        "#,
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    match row {
+        Some((value,)) => match serde_json::from_str::<HashMap<String, i64>>(&value) {
+            Ok(times) => Ok(times),
+            Err(_) => Ok(HashMap::new()),
+        },
+        None => Ok(HashMap::new()),
+    }
+}
+
+pub async fn set_last_notification_time(
+    pool: &SqlitePool,
+    time: &str,
+    timestamp: i64,
+) -> Result<()> {
+    let mut last_notification_times = get_last_notification_times(pool).await?;
+    last_notification_times.insert(time.to_string(), timestamp);
+    let json_value = serde_json::to_string(&last_notification_times)?;
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = ?
+        WHERE key = 'last_notification_times'
+        "#,
+    )
+    .bind(json_value)
     .execute(pool)
     .await?;
 
@@ -889,6 +951,26 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
     .execute(&mut *tx)
     .await?;
 
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = '{}'
+        WHERE key = 'last_notification_times'
+        "#,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = '["09:00"]'
+        WHERE key = 'notification_times'
+        "#,
+    )
+    .execute(&mut *tx)
+    .await?;
+
     tx.commit().await?;
     Ok(())
 }
@@ -1230,12 +1312,12 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_app_settings() -> Result<()> {
+    async fn test_get_app_settings_returns_notification_times_array() -> Result<()> {
         let pool = setup_test_db().await?;
 
         let settings = get_app_settings(&pool).await?;
         assert!(settings.notification_enabled);
-        assert_eq!(settings.notification_time, "09:00");
+        assert_eq!(settings.notification_times, vec!["09:00".to_string()]);
 
         Ok(())
     }
@@ -1700,6 +1782,30 @@ pub mod tests {
     }
 
     #[tokio::test]
+    async fn test_last_notification_times_default() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let initial = get_last_notification_times(&pool).await?;
+        assert!(initial.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get_last_notification_times() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        set_last_notification_time(&pool, "09:00", 111).await?;
+        set_last_notification_time(&pool, "14:30", 222).await?;
+
+        let after = get_last_notification_times(&pool).await?;
+        assert_eq!(after.get("09:00"), Some(&111));
+        assert_eq!(after.get("14:30"), Some(&222));
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_reset_all_data_clears_last_notification_at() -> Result<()> {
         let pool = setup_test_db().await?;
 
@@ -1712,6 +1818,22 @@ pub mod tests {
 
         let after_reset = get_last_notification_at(&pool).await?;
         assert_eq!(after_reset, 0);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_all_data_clears_last_notification_times() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        set_last_notification_time(&pool, "09:00", chrono::Utc::now().timestamp()).await?;
+        let before_reset = get_last_notification_times(&pool).await?;
+        assert!(!before_reset.is_empty());
+
+        reset_all_data(&pool).await?;
+
+        let after_reset = get_last_notification_times(&pool).await?;
+        assert!(after_reset.is_empty());
 
         Ok(())
     }

@@ -845,17 +845,90 @@ async function fetchSettings() {
 
 function populateSettings(settings) {
     const notificationEnabledEl = document.getElementById('notification-enabled');
-    const notificationTimeEl = document.getElementById('notification-time');
+    const notificationTimes = Array.isArray(settings.notification_times) && settings.notification_times.length > 0
+        ? settings.notification_times
+        : ['09:00'];
     
     notificationEnabledEl.checked = settings.notification_enabled || false;
-    notificationTimeEl.value = settings.notification_time || '09:00';
+    renderNotificationTimes(notificationTimes);
+}
+
+function renderNotificationTimes(times) {
+    const list = document.getElementById('notification-times-list');
+    list.innerHTML = '';
+
+    times.forEach(function(time) {
+        const row = document.createElement('div');
+        row.className = 'notification-time-row';
+        row.setAttribute('data-testid', 'notification-time-row');
+
+        const input = document.createElement('input');
+        input.type = 'time';
+        input.value = time;
+        input.setAttribute('data-testid', 'notification-time-input');
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-time-btn';
+        removeBtn.setAttribute('data-testid', 'remove-notification-time');
+        removeBtn.textContent = '\u2212';
+        removeBtn.addEventListener('click', function() {
+            row.remove();
+            updateAddButtonVisibility();
+        });
+
+        row.appendChild(input);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+    });
+
+    updateAddButtonVisibility();
+}
+
+function updateAddButtonVisibility() {
+    const list = document.getElementById('notification-times-list');
+    const addBtn = document.getElementById('add-notification-time');
+    const count = list.querySelectorAll('.notification-time-row').length;
+    addBtn.style.display = count >= 3 ? 'none' : '';
+}
+
+function addNotificationTime() {
+    const list = document.getElementById('notification-times-list');
+    const count = list.querySelectorAll('.notification-time-row').length;
+    if (count >= 3) return;
+
+    const row = document.createElement('div');
+    row.className = 'notification-time-row';
+    row.setAttribute('data-testid', 'notification-time-row');
+
+    const input = document.createElement('input');
+    input.type = 'time';
+    input.value = '12:00';
+    input.setAttribute('data-testid', 'notification-time-input');
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-time-btn';
+    removeBtn.setAttribute('data-testid', 'remove-notification-time');
+    removeBtn.textContent = '\u2212';
+    removeBtn.addEventListener('click', function() {
+        row.remove();
+        updateAddButtonVisibility();
+    });
+
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+    updateAddButtonVisibility();
 }
 
 async function handleSettingsSubmit(event) {
     event.preventDefault();
     
     const notificationEnabled = document.getElementById('notification-enabled').checked;
-    const notificationTime = document.getElementById('notification-time').value;
+    const times = Array.from(document.querySelectorAll('#notification-times-list input[type="time"]')).map(function(el) {
+        return el.value;
+    });
     
     try {
         const response = await fetch(`${API_BASE}/settings`, {
@@ -865,7 +938,7 @@ async function handleSettingsSubmit(event) {
             },
             body: JSON.stringify({
                 notification_enabled: notificationEnabled,
-                notification_time: notificationTime
+                notification_times: times
             })
         });
         
@@ -1212,6 +1285,11 @@ function init() {
     const settingsForm = document.getElementById('settings-form');
     if (settingsForm) {
         settingsForm.addEventListener('submit', handleSettingsSubmit);
+    }
+
+    const addNotificationTimeBtn = document.getElementById('add-notification-time');
+    if (addNotificationTimeBtn) {
+        addNotificationTimeBtn.addEventListener('click', addNotificationTime);
     }
     
     fetchTodayTasks();

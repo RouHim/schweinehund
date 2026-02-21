@@ -566,7 +566,7 @@ section {
 }
 
 .sortable-drag {
-    cursor: grabbing !important;
+    cursor: grabbing;
 }
 
 /* --- Complete Button (Deep Cleaning) --- */
@@ -1103,8 +1103,8 @@ dialog footer button.secondary:hover {
 /* --- Accessibility: Reduced Motion --- */
 @media (prefers-reduced-motion: reduce) {
     * {
-        animation: none !important;
-        transition-duration: 0.01ms !important;
+        animation: none;
+        transition-duration: 0.01ms;
     }
 }
 
@@ -1365,4 +1365,42 @@ dialog footer button.secondary:hover {
         width: 5px;
         height: 5px;
     }
+}
+
+.notification-times-section {
+    margin-bottom: 12px;
+}
+
+.notification-time-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.notification-time-row input[type="time"] {
+    flex: 1;
+}
+
+.remove-time-btn {
+    background: none;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-size: 1rem;
+    color: var(--error);
+}
+
+.add-time-btn {
+    background: none;
+    border: 1px dashed currentColor;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 4px 10px;
+    width: 100%;
+    text-align: left;
+    font-size: 0.9rem;
+    margin-top: 4px;
+    opacity: 0.8;
 }
