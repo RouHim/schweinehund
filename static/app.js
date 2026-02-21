@@ -37,6 +37,20 @@ function initModal() {
         });
     }
     
+    const addAllDailyBtn = document.getElementById('add-all-daily-task-btn');
+    if (addAllDailyBtn) {
+        addAllDailyBtn.addEventListener('click', () => {
+            openModal('daily');
+        });
+    }
+    
+    const addAllDeepCleaningBtn = document.getElementById('add-all-deep-cleaning-btn');
+    if (addAllDeepCleaningBtn) {
+        addAllDeepCleaningBtn.addEventListener('click', () => {
+            openModal('deep-cleaning');
+        });
+    }
+    
     const dayInput = document.getElementById('task-day-of-week');
     const intervalGroup = document.getElementById('interval-group');
     const startDateGroup = document.getElementById('start-date-group');
