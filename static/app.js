@@ -871,6 +871,7 @@ function renderNotificationTimes(times) {
         removeBtn.type = 'button';
         removeBtn.className = 'remove-time-btn';
         removeBtn.setAttribute('data-testid', 'remove-notification-time');
+        removeBtn.setAttribute('aria-label', 'Benachrichtigungszeit entfernen');
         removeBtn.textContent = '\u2212';
         removeBtn.addEventListener('click', function() {
             row.remove();
@@ -910,6 +911,7 @@ function addNotificationTime() {
     removeBtn.type = 'button';
     removeBtn.className = 'remove-time-btn';
     removeBtn.setAttribute('data-testid', 'remove-notification-time');
+    removeBtn.setAttribute('aria-label', 'Benachrichtigungszeit entfernen');
     removeBtn.textContent = '\u2212';
     removeBtn.addEventListener('click', function() {
         row.remove();
