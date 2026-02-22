@@ -566,7 +566,7 @@ section {
 }
 
 .sortable-drag {
-    cursor: grabbing;
+    cursor: grabbing !important;
 }
 
 /* --- Complete Button (Deep Cleaning) --- */
@@ -1103,8 +1103,8 @@ dialog footer button.secondary:hover {
 /* --- Accessibility: Reduced Motion --- */
 @media (prefers-reduced-motion: reduce) {
     * {
-        animation: none;
-        transition-duration: 0.01ms;
+        animation: none !important;
+        transition-duration: 0.01ms !important;
     }
 }
 

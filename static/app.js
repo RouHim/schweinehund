@@ -873,10 +873,6 @@ function renderNotificationTimes(times) {
         removeBtn.setAttribute('data-testid', 'remove-notification-time');
         removeBtn.setAttribute('aria-label', 'Benachrichtigungszeit entfernen');
         removeBtn.textContent = '\u2212';
-        removeBtn.addEventListener('click', function() {
-            row.remove();
-            updateAddButtonVisibility();
-        });
 
         row.appendChild(input);
         row.appendChild(removeBtn);
@@ -913,15 +909,27 @@ function addNotificationTime() {
     removeBtn.setAttribute('data-testid', 'remove-notification-time');
     removeBtn.setAttribute('aria-label', 'Benachrichtigungszeit entfernen');
     removeBtn.textContent = '\u2212';
-    removeBtn.addEventListener('click', function() {
-        row.remove();
-        updateAddButtonVisibility();
-    });
 
     row.appendChild(input);
     row.appendChild(removeBtn);
     list.appendChild(row);
     updateAddButtonVisibility();
+}
+
+function initNotificationTimeRemoveDelegation() {
+    const list = document.getElementById('notification-times-list');
+    if (!list) return;
+
+    list.addEventListener('click', function(event) {
+        const removeBtn = event.target.closest('[data-testid="remove-notification-time"]');
+        if (!removeBtn || !list.contains(removeBtn)) return;
+
+        const row = removeBtn.closest('.notification-time-row');
+        if (!row) return;
+
+        row.remove();
+        updateAddButtonVisibility();
+    });
 }
 
 async function handleSettingsSubmit(event) {
@@ -1354,6 +1362,8 @@ function init() {
         addNotificationTimeBtn.addEventListener('click', addNotificationTime);
     }
 
+    initNotificationTimeRemoveDelegation();
+
     const exportBtn = document.getElementById('export-btn');
     if (exportBtn) {
         exportBtn.addEventListener('click', handleExport);
@@ -1387,7 +1397,6 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
             .then(registration => {
-                console.log('[SW] Service Worker erfolgreich registriert:', registration);
             })
             .catch(error => {
                 console.error('[SW] Service Worker Registrierung fehlgeschlagen:', error);
