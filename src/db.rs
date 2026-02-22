@@ -971,6 +971,16 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
     .execute(&mut *tx)
     .await?;
 
+    sqlx::query(
+        r#"
+        UPDATE app_state
+        SET value = 'true'
+        WHERE key = 'notification_enabled'
+        "#,
+    )
+    .execute(&mut *tx)
+    .await?;
+
     tx.commit().await?;
     Ok(())
 }
@@ -1887,6 +1897,30 @@ pub mod tests {
 
         let after_reset = get_last_notification_times(&pool).await?;
         assert!(after_reset.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_reset_all_data_resets_notification_enabled_to_true() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        update_app_settings(
+            &pool,
+            &AppSettings {
+                notification_enabled: false,
+                notification_times: vec!["09:00".to_string()],
+            },
+        )
+        .await?;
+
+        let before_reset = get_app_settings(&pool).await?;
+        assert!(!before_reset.notification_enabled);
+
+        reset_all_data(&pool).await?;
+
+        let after_reset = get_app_settings(&pool).await?;
+        assert!(after_reset.notification_enabled);
 
         Ok(())
     }
