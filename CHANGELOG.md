@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/RouHim/schweinehund/compare/v1.10.0...v1.10.1) (2026-02-22)
+
+
+### Bug Fixes
+
+* **ui:** correct notification time button styling ([a1cd092](https://github.com/RouHim/schweinehund/commit/a1cd0924bcbec1252d93e115d22d3d9a457e3bfb))
+
 # [1.10.0](https://github.com/RouHim/schweinehund/compare/v1.9.1...v1.10.0) (2026-02-21)
 
 
