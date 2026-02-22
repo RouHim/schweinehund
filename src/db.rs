@@ -30,7 +30,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone, FromRow, serde::Serialize)]
+#[derive(Debug, Clone, FromRow, serde::Serialize, serde::Deserialize)]
 pub struct DailyTask {
     pub id: i64,
     pub name: String,
@@ -975,6 +975,59 @@ pub async fn reset_all_data(pool: &SqlitePool) -> Result<()> {
     Ok(())
 }
 
+pub async fn import_all_tasks(
+    pool: &SqlitePool,
+    daily_tasks: &[DailyTask],
+    deep_cleaning_tasks: &[DeepCleaningTask],
+) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query("DELETE FROM daily_tasks")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM deep_cleaning_tasks")
+        .execute(&mut *tx)
+        .await?;
+
+    for task in daily_tasks {
+        sqlx::query(
+            r#"
+            INSERT INTO daily_tasks (name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&task.name)
+        .bind(&task.description)
+        .bind(&task.zone)
+        .bind(task.day_of_week)
+        .bind(task.completed)
+        .bind(task.completed_at)
+        .bind(task.interval_weeks)
+        .bind(&task.start_date)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    for task in deep_cleaning_tasks {
+        sqlx::query(
+            r#"
+            INSERT INTO deep_cleaning_tasks (name, description, zone, queue_position, completed_at)
+            VALUES (?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&task.name)
+        .bind(&task.description)
+        .bind(&task.zone)
+        .bind(task.queue_position)
+        .bind(task.completed_at)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -1834,6 +1887,127 @@ pub mod tests {
 
         let after_reset = get_last_notification_times(&pool).await?;
         assert!(after_reset.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_import_replaces_all_tasks() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let initial_daily_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM daily_tasks")
+            .fetch_one(&pool)
+            .await?;
+        assert!(initial_daily_count.0 > 0, "Seed daily tasks should exist");
+
+        let daily_tasks = vec![
+            DailyTask {
+                id: 0,
+                name: "Task A".to_string(),
+                description: None,
+                zone: None,
+                day_of_week: -1,
+                completed: false,
+                completed_at: None,
+                interval_weeks: 1,
+                start_date: None,
+            },
+            DailyTask {
+                id: 0,
+                name: "Task B".to_string(),
+                description: None,
+                zone: None,
+                day_of_week: -1,
+                completed: false,
+                completed_at: None,
+                interval_weeks: 1,
+                start_date: None,
+            },
+        ];
+
+        let deep_tasks = vec![DeepCleaningTask {
+            id: 0,
+            name: "Deep A".to_string(),
+            description: None,
+            zone: None,
+            queue_position: 1,
+            completed_at: None,
+        }];
+
+        import_all_tasks(&pool, &daily_tasks, &deep_tasks).await?;
+
+        let daily_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM daily_tasks")
+            .fetch_one(&pool)
+            .await?;
+        let deep_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM deep_cleaning_tasks")
+            .fetch_one(&pool)
+            .await?;
+
+        assert_eq!(daily_count.0, 2);
+        assert_eq!(deep_count.0, 1);
+
+        let imported_names: Vec<(String,)> =
+            sqlx::query_as("SELECT name FROM daily_tasks ORDER BY name")
+                .fetch_all(&pool)
+                .await?;
+        assert_eq!(
+            imported_names,
+            vec![("Task A".to_string(),), ("Task B".to_string(),)]
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_import_preserves_completion_state() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        let daily_task = DailyTask {
+            id: 0,
+            name: "Completed Task".to_string(),
+            description: None,
+            zone: None,
+            day_of_week: -1,
+            completed: true,
+            completed_at: Some(1700000000),
+            interval_weeks: 1,
+            start_date: None,
+        };
+
+        import_all_tasks(&pool, &[daily_task], &[]).await?;
+
+        let imported = sqlx::query_as::<_, DailyTask>(
+            r#"
+            SELECT id, name, description, zone, day_of_week, completed, completed_at, interval_weeks, start_date
+            FROM daily_tasks
+            WHERE name = ?
+            "#,
+        )
+        .bind("Completed Task")
+        .fetch_one(&pool)
+        .await?;
+
+        assert!(imported.completed);
+        assert_eq!(imported.completed_at, Some(1700000000));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_import_empty_arrays() -> Result<()> {
+        let pool = setup_test_db().await?;
+
+        import_all_tasks(&pool, &[], &[]).await?;
+
+        let daily_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM daily_tasks")
+            .fetch_one(&pool)
+            .await?;
+        let deep_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM deep_cleaning_tasks")
+            .fetch_one(&pool)
+            .await?;
+
+        assert_eq!(daily_count.0, 0);
+        assert_eq!(deep_count.0, 0);
 
         Ok(())
     }

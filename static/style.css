@@ -1436,3 +1436,27 @@ dialog footer button.secondary:hover {
     outline: none;
     box-shadow: 0 0 0 3px var(--primary-faint);
 }
+
+/* Data management section */
+.data-management-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-light);
+}
+
+.data-management-section h3 {
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.data-management-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.data-management-buttons button {
+    flex: 1;
+    min-width: 120px;
+}

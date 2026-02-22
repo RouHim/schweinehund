@@ -6,7 +6,7 @@ use warp::{http::StatusCode, reject, Filter, Rejection, Reply};
 
 use crate::{db, notifications};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct AllTasksResponse {
     daily_tasks: Vec<db::DailyTask>,
     deep_cleaning_tasks: Vec<db::DeepCleaningTask>,
@@ -122,7 +122,8 @@ pub fn api_routes(
         .or(debug_reset_all(pool.clone()))
         .or(debug_trigger_notification(pool.clone()))
         .or(debug_notify_status(pool.clone()))
-        .or(debug_notify(pool))
+        .or(debug_notify(pool.clone()))
+        .or(import_tasks(pool))
         .with(cors)
 }
 
@@ -703,6 +704,40 @@ async fn handle_debug_notify(_pool: SqlitePool) -> Result<impl Reply, Rejection>
     }))
 }
 
+fn import_tasks(pool: SqlitePool) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("api" / "import")
+        .and(warp::post())
+        .and(warp::body::content_length_limit(1_048_576))
+        .and(warp::body::json())
+        .and(with_db(pool))
+        .and_then(handle_import)
+}
+
+async fn handle_import(data: AllTasksResponse, pool: SqlitePool) -> Result<impl Reply, Rejection> {
+    for task in &data.daily_tasks {
+        if task.name.is_empty() || task.name.len() > 255 {
+            return Err(reject::custom(BadRequest));
+        }
+        if task.day_of_week != -1 && (task.day_of_week < 1 || task.day_of_week > 7) {
+            return Err(reject::custom(BadRequest));
+        }
+    }
+
+    for task in &data.deep_cleaning_tasks {
+        if task.name.is_empty() || task.name.len() > 255 {
+            return Err(reject::custom(BadRequest));
+        }
+    }
+
+    db::import_all_tasks(&pool, &data.daily_tasks, &data.deep_cleaning_tasks)
+        .await
+        .map_err(|_| reject::custom(DatabaseError))?;
+
+    Ok(warp::reply::json(&SuccessResponse {
+        message: "Import erfolgreich — alle Aufgaben wurden ersetzt".to_string(),
+    }))
+}
+
 pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Rejection> {
     if err.is_not_found() {
         Ok(warp::reply::with_status(
@@ -1119,5 +1154,29 @@ mod tests {
 
         let result = handle_update_settings(req, pool).await;
         assert!(result.is_ok(), "Should accept 3 valid notification times");
+    }
+
+    #[tokio::test]
+    async fn test_import_rejects_invalid_day_of_week() {
+        let pool = db::init_pool("sqlite::memory:").await.unwrap();
+        db::run_migrations(&pool).await.unwrap();
+
+        let data = AllTasksResponse {
+            daily_tasks: vec![db::DailyTask {
+                id: 0,
+                name: "Invalid Day".to_string(),
+                description: None,
+                zone: None,
+                day_of_week: 99,
+                completed: false,
+                completed_at: None,
+                interval_weeks: 1,
+                start_date: None,
+            }],
+            deep_cleaning_tasks: vec![],
+        };
+
+        let result = handle_import(data, pool).await;
+        assert!(result.is_err(), "Should reject invalid day_of_week");
     }
 }

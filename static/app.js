@@ -1274,6 +1274,66 @@ function initCalendarListeners() {
     }
 }
 
+async function handleExport() {
+    try {
+        const response = await fetch(`${API_BASE}/tasks/all`);
+        if (!response.ok) {
+            throw new Error(`Export fehlgeschlagen: ${response.statusText}`);
+        }
+        const data = await response.json();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const today = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `schweinehund-export-${today}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Export fehlgeschlagen:', error);
+        alert(`Export fehlgeschlagen: ${error.message}`);
+    }
+}
+
+function handleImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!confirm('Bist du sicher? Alle bestehenden Aufgaben werden ersetzt.')) {
+            return;
+        }
+
+        try {
+            const text = await file.text();
+            const response = await fetch(`${API_BASE}/import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: text
+            });
+
+            if (!response.ok) {
+                throw new Error(`Import fehlgeschlagen: ${response.statusText}`);
+            }
+
+            alert('Import erfolgreich!');
+            fetchTodayTasks();
+            fetchDeepCleaning();
+            fetchAllTasks();
+        } catch (error) {
+            console.error('Import fehlgeschlagen:', error);
+            alert(`Import fehlgeschlagen: ${error.message}`);
+        }
+    });
+    input.click();
+}
+
 function init() {
     initTheme();
     initModal();
@@ -1292,6 +1352,16 @@ function init() {
     const addNotificationTimeBtn = document.getElementById('add-notification-time');
     if (addNotificationTimeBtn) {
         addNotificationTimeBtn.addEventListener('click', addNotificationTime);
+    }
+
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', handleExport);
+    }
+
+    const importBtn = document.getElementById('import-btn');
+    if (importBtn) {
+        importBtn.addEventListener('click', handleImport);
     }
     
     fetchTodayTasks();
