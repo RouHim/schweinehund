@@ -1,3 +1,16 @@
+# [1.11.0](https://github.com/RouHim/schweinehund/compare/v1.10.1...v1.11.0) (2026-02-22)
+
+
+### Bug Fixes
+
+* **notifications:** reset enabled on reset-all ([61bd8d3](https://github.com/RouHim/schweinehund/commit/61bd8d3bdf4fd9bfd83f79be730dc10ca64a41c1))
+* **ui:** delegate notification time removal ([ce6bef5](https://github.com/RouHim/schweinehund/commit/ce6bef50207d55c8b67e278691d8feed8ad3cbd2))
+
+
+### Features
+
+* add JSON export/import for task data ([b44ea29](https://github.com/RouHim/schweinehund/commit/b44ea2955aadeb10e5c0fbd65b73e432e66feca4))
+
 ## [1.10.1](https://github.com/RouHim/schweinehund/compare/v1.10.0...v1.10.1) (2026-02-22)
 
 
