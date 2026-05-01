@@ -136,7 +136,7 @@ test.describe('Start Date Feature', () => {
       data: {
         name: 'Original Date Task',
         day_of_week: 1,
-        start_date: '2026-02-15',
+        start_date: '2099-02-15',
       },
     });
 
@@ -155,7 +155,7 @@ test.describe('Start Date Feature', () => {
     const modal = page.locator('#task-modal');
     await expect(modal).toBeVisible();
 
-    await page.locator('[data-testid="start-date-input"]').fill('2026-03-20');
+    await page.locator('[data-testid="start-date-input"]').fill('2099-03-20');
     await page.locator('[data-testid="modal-save-btn"]').click();
     
     await expect(modal).not.toBeVisible({ timeout: 10000 });
@@ -165,6 +165,6 @@ test.describe('Start Date Feature', () => {
     const updatedTaskItem = allTasksList.locator('.task-item', {
       has: page.locator('.task-name', { hasText: 'Original Date Task' })
     });
-    await expect(updatedTaskItem.locator('.start-date-badge', { hasText: 'ab 2026-03-20' })).toBeVisible();
+    await expect(updatedTaskItem.locator('.start-date-badge', { hasText: 'ab 2099-03-20' })).toBeVisible();
   });
 });
