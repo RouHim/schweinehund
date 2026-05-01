@@ -1,3 +1,10 @@
+## [1.11.1](https://github.com/RouHim/schweinehund/compare/v1.11.0...v1.11.1) (2026-05-01)
+
+
+### Bug Fixes
+
+* **e2e:** use future dates in start-date test to prevent time-based flakiness ([b26a149](https://github.com/RouHim/schweinehund/commit/b26a1496529bde4d50dc152e01d76971e21a5e72))
+
 # [1.11.0](https://github.com/RouHim/schweinehund/compare/v1.10.1...v1.11.0) (2026-02-22)
 
 
